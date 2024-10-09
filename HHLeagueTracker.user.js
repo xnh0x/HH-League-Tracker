@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.1
+// @version      1.2
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -31,7 +31,7 @@
     'use strict';
     /*global shared,opponents_list,$*/
 
-    const config = loadConfig();
+    const config = await loadConfig();
 
     if(window.location.pathname !== '/leagues.html') {
         return;
@@ -377,7 +377,14 @@
         OCTOKIT.rest.repos.createOrUpdateFileContents(params);
     }
 
-    function loadConfig()
+    function getHHPlusPlusConfig() {
+        return (async () => {
+            await new Promise($);
+            return window.hhPlusPlusConfig;
+        })();
+    }
+
+    async function loadConfig()
     {
         // defaults
         let config = {
@@ -394,8 +401,10 @@
         };
 
         // changing config requires HH++
-        const { HHPlusPlus, hhPlusPlusConfig } = window;
-        if (typeof HHPlusPlus === 'undefined' || typeof hhPlusPlusConfig === 'undefined') { return config; }
+        const hhPlusPlusConfig = await getHHPlusPlusConfig();
+        if (hhPlusPlusConfig == null) {
+            return config;
+        }
 
         hhPlusPlusConfig.registerGroup({
             key: 'LeagueTracker',
