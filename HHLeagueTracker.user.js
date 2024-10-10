@@ -105,6 +105,9 @@
                 } else {
                     log('couldn\'t read data from github, using localStorage');
                 }
+                // TODO: add notification to let the user know there is an issue since they usually
+                //  won't have the console open. NOT alert() as it interrupts the game which can
+                //  cost you a good opportunity to fight if it's unexpected
                 config.githubStorage.enabled = false;
             }
         }
@@ -131,6 +134,7 @@
                 const opponentRow = opponentRows[i];
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
+                // TODO: add skill icons
                 newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
                 newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
             }
@@ -167,6 +171,7 @@
         let lastLostPoints = oldData.lastLostPoints || 0;
         let lastChangeTime = oldData.lastChangeTime || 0;
 
+        // TODO: if it's your own id there is no need to guess
         const gainedScore = score - oldScore;
         let newLostPoints = (gainedScore) % 25;
         if (newLostPoints) { newLostPoints = 25 - newLostPoints }
