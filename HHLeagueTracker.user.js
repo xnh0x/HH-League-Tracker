@@ -115,7 +115,7 @@
         const STORED_LEAGUE_END_TS = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.leagueEnd)) || Infinity;
         if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
             log('new league has started, deleting old data from local storage')
-            if (config.githubStorage.enabled) {
+            if (!config.githubStorage.enabled) {
                 oldOpponentScores = { data: {} };
             }
             oldOpponentStats = {};
