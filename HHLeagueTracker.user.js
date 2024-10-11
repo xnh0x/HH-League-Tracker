@@ -172,8 +172,7 @@
 
         // TODO: if it's your own id there is no need to guess
         const gainedScore = score - oldScore;
-        let newLostPoints = (gainedScore) % 25;
-        if (newLostPoints) { newLostPoints = 25 - newLostPoints }
+        const newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
         const totalLostPoints = oldLostPoints + newLostPoints;
 
         // add lost points below score
