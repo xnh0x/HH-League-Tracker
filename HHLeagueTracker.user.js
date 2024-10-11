@@ -124,8 +124,7 @@
         let newOpponentScores = {};
         let newOpponentStats = {};
 
-        // go through all rows to update score and stat data
-        function calculateChanges() {
+        function updateTable() {
             let opponentRows = document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row');
             for (let i = 0; i < opponentRows.length; i++) {
                 const opponentRow = opponentRows[i];
@@ -136,9 +135,9 @@
             }
         }
 
-        calculateChanges();
+        updateTable();
         // redo changes after sorting the table
-        $(document).on('league:table-sorted', () => { calculateChanges(); })
+        $(document).on('league:table-sorted', () => { updateTable(); })
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.scores, JSON.stringify(newOpponentScores));
         if (config.githubStorage.enabled) {
