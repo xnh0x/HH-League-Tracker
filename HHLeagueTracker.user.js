@@ -37,6 +37,20 @@
         return;
     }
 
+    const SKILL_ICONS = {
+        execute: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/execute_icon.png',
+        reflect: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/reflect_icon.png',
+        shield: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/shield_icon.png',
+        stun: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/stun_icon.png',
+    };
+
+    const SKILL_BY_ELEMENT = {
+        fire: {type: 'execute', id: 14}, water: {type: 'execute', id: 14},
+        nature: {type: 'reflect', id: 13}, psychic: {type: 'reflect', id: 13},
+        light: {type: 'shield', id: 12}, stone: {type: 'shield', id: 12},
+        darkness: {type: 'stun', id: 11}, sun: {type: 'stun', id: 11},
+    };
+
     const NUMBER_FORMATTER = Intl.NumberFormat('en', { notation: 'compact', signDisplay: "exceptZero" }).format;
     const PERCENT_FORMATTER = Intl.NumberFormat('en', { minimumFractionDigits : 1, maximumFractionDigits : 1, signDisplay: "exceptZero" }).format;
 
@@ -133,9 +147,11 @@
                 const opponentRow = opponentRows[i];
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                // TODO: add skill icons
                 newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
                 newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
+                if (config.activeSkill.enabled) {
+                    addSkillIcon(opponentRow, id);
+                }
             }
         }
 
@@ -281,6 +297,28 @@
         return newStats;
     }
 
+    function addSkillIcon(opponentRow, id) {
+        const center = OPPONENTS_BY_ID[id].player.team.girls[0];
+
+        if (center.skill_tiers_info['5'].skill_points_used) {
+            const {type, id} = SKILL_BY_ELEMENT[center.girl.element];
+            const display_value_text = center.skills[id].skill.display_value_text;
+
+            let team_icons = opponentRow.querySelector('.data-column[column="team"]').firstElementChild;
+            if (team_icons.childElementCount === 2) {
+                team_icons.lastElementChild.style.marginLeft = '-0.66rem';
+            }
+            team_icons.lastElementChild.style.marginRight = '-0.1rem';
+
+            let skill_icon = document.createElement('img');
+            skill_icon.classList.add('team-theme', 'icon');
+            skill_icon.src = SKILL_ICONS[type];
+            skill_icon.setAttribute('tooltip', display_value_text);
+
+            team_icons.appendChild(skill_icon);
+        }
+    }
+
     function getScoreColor(lostPoints)
     {
         if (lostPoints <= 25) {
@@ -401,6 +439,9 @@
                 level: false,
                 points: true,
             },
+            activeSkill: {
+                enabled: false,
+            }
         };
 
         // changing config requires HH++
@@ -453,6 +494,21 @@
             },
         });
         config.scoreColor.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'activeSkill',
+                label: 'Add active skill icon to the team column',
+                default: false,
+            },
+            run() {
+                config.activeSkill = {
+                    enabled: true,
+                };
+            },
+        });
+        config.activeSkill.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
