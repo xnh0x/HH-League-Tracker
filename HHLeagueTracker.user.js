@@ -132,6 +132,9 @@
 
                 newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
                 newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
+                if (config.activeSkill.enabled) {
+                    markActiveSkill(opponentRow, id);
+                }
             }
         }
 
@@ -276,6 +279,44 @@
         return newStats;
     }
 
+    function markActiveSkill(opponentRow, id) {
+        const center = OPPONENTS_BY_ID[id].player.team.girls[0];
+
+        if (center.skill_tiers_info['5']?.skill_points_used) {
+            const {type, id, color} = getSkillByElement(center.girl.element, config.activeSkill.ocd);
+
+            if (config.activeSkill.noIcon) {
+                applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
+            } else {
+                addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild,
+                    type, id, center.skills[id].skill.display_value_text);
+            }
+
+        }
+    }
+
+    function applySkillColor(nickname, color) {
+        // remove clubmate class from League++ so clubmates get colored correctly too
+        nickname.classList.remove("clubmate");
+        nickname.style.color = color;
+    }
+
+    function addSkillIcon(team_icons, type, id, tooltip) {
+        // move the icons a little closer together
+        team_icons.lastElementChild.style.marginRight = '-0.1rem';
+        if (team_icons.childElementCount === 2) {
+            // this will overlap the two theme elements to save space
+            team_icons.lastElementChild.style.marginLeft = '-0.66rem';
+        }
+
+        let skill_icon = document.createElement('img');
+        skill_icon.classList.add('team-theme', 'icon');
+        skill_icon.src = getSkillIcon(type);
+        skill_icon.setAttribute('tooltip', tooltip);
+
+        team_icons.appendChild(skill_icon);
+    }
+
     function getScoreColor(lostPoints)
     {
         if (lostPoints <= 25) {
@@ -288,6 +329,40 @@
             return "#32bc4f"; // rare
         } else {
             return "#676767"; // grey
+        }
+    }
+
+    function getSkillByElement(element, ocd) {
+        switch (element) {
+            case 'fire':
+            case 'water':
+                return {type: 'execute', id: 14, color: ocd ? '#66cd00' : '#32bc4f'};
+            case 'nature':
+            case 'psychic':
+                return {type: 'reflect', id: 13, color: ocd ? '#b968e6' : '#ec0039'};
+            case 'light':
+            case 'stone':
+                return {type: 'shield', id: 12, color: ocd ? '#ffa500' : '#ffb244'};
+            case 'darkness':
+            case 'sun':
+                return {type: 'stun', id: 11, color: ocd ? '#14b4d9' : '#d561e6'};
+            default:
+                throw 'Unknown element: ' + element;
+        }
+    }
+
+    function getSkillIcon(type) {
+        switch (type) {
+            case 'execute':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/execute_icon.png';
+            case 'reflect':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/reflect_icon.png';
+            case 'shield':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/shield_icon.png';
+            case 'stun':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/stun_icon.png';
+            default:
+                throw 'Unknown skill type: ' + type;
         }
     }
 
@@ -396,6 +471,11 @@
                 level: false,
                 points: true,
             },
+            activeSkill: {
+                enabled: false,
+                noIcon: false,
+                ocd: false,
+            }
         };
 
         // changing config requires HH++
@@ -448,6 +528,28 @@
             },
         });
         config.scoreColor.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'activeSkill',
+                label: 'Add active skill icon to the team column',
+                default: false,
+                subSettings: [
+                    { key: 'noIcon', default: false, label: 'Instead of an icon apply color to the name' },
+                    { key: 'ocd', default: false, label: 'Use the same colors as OCD' },
+                ],
+            },
+            run(subSettings) {
+                config.activeSkill = {
+                    enabled: true,
+                    noIcon: subSettings.noIcon,
+                    ocd: subSettings.ocd,
+                };
+                config.scoreColor.name &= !subSettings.noIcon;
+            },
+        });
+        config.activeSkill.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
