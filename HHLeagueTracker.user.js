@@ -25,13 +25,18 @@
 // @downloadURL  https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/develop/HHLeagueTracker.user.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com
 // @grant        unsafeWindow
+// @grant        GM_info
 // ==/UserScript==
 
 (async function (window) {
     'use strict';
     /*global shared,opponents_list,$*/
 
+    info('version:', GM_info.script.version)
+
     const config = await loadConfig();
+
+    info('config:', config);
 
     if(window.location.pathname !== '/leagues.html') {
         return;
@@ -161,14 +166,23 @@
         localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
     }
 
-    function info(message) {
-        console.log('League Tracker  [INFO] ', message)
+    function info() {
+        log('', arguments);
     }
 
-    function debug(message) {
+    function debug() {
         if (config.debug.enabled) {
-            console.log('League Tracker [DEBUG] ', message)
+            log(' [DEBUG]', arguments);
         }
+    }
+
+    function log(tag, args) {
+        let _args = ['League Tracker:' + tag];
+        // _args.push('League Tracker:' + tag);
+        for( let i = 0; i < args.length; i++ ) {
+            _args.push( args[i] );
+        }
+        console.log.apply( console, _args );
     }
 
     function updateScore(opponentRow, id, oldData)
