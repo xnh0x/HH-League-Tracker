@@ -77,7 +77,7 @@
 
     async function leagueTracker(firstRun) {
         if (document.querySelector('#leagues div.league_girl') === null) {
-            setTimeout(leagueTracker, 50, firstRun);
+            setTimeout(leagueTracker, 5, firstRun);
             return;
         }
 
