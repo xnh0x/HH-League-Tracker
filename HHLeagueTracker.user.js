@@ -58,7 +58,7 @@
 
     if (config.githubStorage.enabled) {
         if (!window.LeagueTrackerGitHubConfig) {
-            log('GitHubConfig missing, using localStorage')
+            info('GitHubConfig missing, using localStorage')
             config.githubStorage.enabled = false;
         } else {
             GITHUB_CONFIG = window.LeagueTrackerGitHubConfig;
@@ -91,19 +91,19 @@
                 oldOpponentScores = await readFromGithub();
             } catch (e) {
                 if (firstRun && e.status === 404) {
-                    log(GITHUB_CONFIG.path + ' doesn\'t exist yet')
+                    info(GITHUB_CONFIG.path + ' doesn\'t exist yet')
                     try {
                         await commitNewFile();
                     } catch (f) {
-                        console.log(f);
+                        info(f);
                     }
-                    log('restart script');
+                    info('restart script');
                     setTimeout(leagueTracker, 500, false);
                     return;
                 } else if (e.status === 401) {
-                    log('check github config, token not valid for repo, using localStorage')
+                    info('check github config, token not valid for repo, using localStorage')
                 } else {
-                    log('couldn\'t read data from github, using localStorage');
+                    info('couldn\'t read data from github, using localStorage');
                 }
                 // TODO: add notification to let the user know there is an issue since they usually
                 //  won't have the console open. NOT alert() as it interrupts the game which can
@@ -117,7 +117,7 @@
         // check and reset local storage for new league
         const STORED_LEAGUE_END_TS = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.leagueEnd)) || Infinity;
         if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
-            log('new league has started, deleting old data from local storage')
+            info('new league has started, deleting old data from local storage')
             if (!config.githubStorage.enabled) {
                 oldOpponentScores = { data: {} };
             }
@@ -156,8 +156,14 @@
         localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
     }
 
-    function log(message) {
-        console.log('HH League Tracker: ' + message)
+    function info(message) {
+        console.log('League Tracker  [INFO] ', message)
+    }
+
+    function debug(message) {
+        if (config.debug.enabled) {
+            console.log('League Tracker [DEBUG] ', message)
+        }
     }
 
     function updateScore(opponentRow, id, oldData)
@@ -401,7 +407,7 @@
     }
 
     async function readFromGithub() {
-        log('reading ' + GITHUB_CONFIG.path);
+        info('reading ' + GITHUB_CONFIG.path);
         const params = {
             owner: GITHUB_CONFIG.owner,
             repo: GITHUB_CONFIG.repo,
@@ -411,7 +417,7 @@
             },
         }
         const response = await OCTOKIT.rest.repos.getContent(params);
-        console.log(response);
+        debug(response);
         return {
             data: JSON.parse(atob(response.data.content)), // file content needs to be decoded from base64
             sha: response.data.sha, // required to write an update later
@@ -423,7 +429,7 @@
     }
 
     async function commitNewFile() {
-        log('creating ' + GITHUB_CONFIG.path);
+        info('creating ' + GITHUB_CONFIG.path);
         const message = commitMessage('create');
         const content = btoa('{}'); // needs to be encoded in base64
         await writeToGithub(content, message);
@@ -431,10 +437,10 @@
 
     async function commitUpdate(oldData, sha, data) {
         if (isEqual(oldData, data)) {
-            log('nothing changed, no need to update');
+            info('nothing changed, no need to update');
             return;
         }
-        log('updating ' + GITHUB_CONFIG.path);
+        info('updating ' + GITHUB_CONFIG.path);
         const message = commitMessage('update');
         const content = btoa(JSON.stringify(data, null, 2)); // needs to be encoded in base64
         await writeToGithub(content, message, sha);
@@ -451,7 +457,8 @@
         if (sha) {
             params.sha = sha // to write an update sha is required
         }
-        OCTOKIT.rest.repos.createOrUpdateFileContents(params);
+        const response = OCTOKIT.rest.repos.createOrUpdateFileContents(params);
+        debug(response);
     }
 
     function getHHPlusPlusConfig() {
@@ -465,6 +472,9 @@
     {
         // defaults
         let config = {
+            debug: {
+                enabled: false,
+            },
             githubStorage: {
                 enabled: false,
             },
@@ -492,6 +502,21 @@
             key: 'LeagueTracker',
             name: 'League Tracker'
         });
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'debug',
+                label: 'Debug log',
+                default: false,
+            },
+            run() {
+                config.debug = {
+                    enabled: true,
+                };
+            },
+        });
+        config.debug.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
