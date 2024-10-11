@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         HH League Tracker
-// @version      1.2
+// @name         HH League Tracker Dev
+// @version      1.2.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -21,8 +21,8 @@
 // @match        https://*.hornyheroes.com/home.html*
 // @run-at       document-end
 // @namespace    https://github.com/xnh0x/HH-League-Tracker
-// @updateURL    https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/master/HHLeagueTracker.user.js
-// @downloadURL  https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/master/HHLeagueTracker.user.js
+// @updateURL    https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/develop/HHLeagueTracker.user.js
+// @downloadURL  https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/develop/HHLeagueTracker.user.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com
 // @grant        unsafeWindow
 // ==/UserScript==
