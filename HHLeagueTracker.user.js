@@ -59,6 +59,11 @@
     }
 
     const LEAGUE_END_TS = (window.server_now_ts + window.season_end_at) * 1000;
+
+    if (!opponents_list.length) {
+        info('no opponents found');
+        return;
+    }
     const OPPONENTS_BY_ID = opponents_list.reduce(function(map,object) { map[object.player.id_fighter] = object; return map; }, {})
 
     if (config.githubStorage.enabled) {
