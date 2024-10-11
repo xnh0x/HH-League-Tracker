@@ -37,20 +37,6 @@
         return;
     }
 
-    const SKILL_ICONS = {
-        execute: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/execute_icon.png',
-        reflect: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/reflect_icon.png',
-        shield: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/shield_icon.png',
-        stun: 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/stun_icon.png',
-    };
-
-    const SKILL_BY_ELEMENT = {
-        fire: {type: 'execute', id: 14}, water: {type: 'execute', id: 14},
-        nature: {type: 'reflect', id: 13}, psychic: {type: 'reflect', id: 13},
-        light: {type: 'shield', id: 12}, stone: {type: 'shield', id: 12},
-        darkness: {type: 'stun', id: 11}, sun: {type: 'stun', id: 11},
-    };
-
     const NUMBER_FORMATTER = Intl.NumberFormat('en', { notation: 'compact', signDisplay: "exceptZero" }).format;
     const PERCENT_FORMATTER = Intl.NumberFormat('en', { minimumFractionDigits : 1, maximumFractionDigits : 1, signDisplay: "exceptZero" }).format;
 
@@ -150,7 +136,7 @@
                 newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
                 newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
                 if (config.activeSkill.enabled) {
-                    addSkillIcon(opponentRow, id);
+                    markActiveSkill(opponentRow, id);
                 }
             }
         }
@@ -297,26 +283,42 @@
         return newStats;
     }
 
-    function addSkillIcon(opponentRow, id) {
+    function markActiveSkill(opponentRow, id) {
         const center = OPPONENTS_BY_ID[id].player.team.girls[0];
 
         if (center.skill_tiers_info['5'].skill_points_used) {
-            const {type, id} = SKILL_BY_ELEMENT[center.girl.element];
-            const display_value_text = center.skills[id].skill.display_value_text;
+            const {type, id, color} = getSkillByElement(center.girl.element, config.activeSkill.ocd);
 
-            let team_icons = opponentRow.querySelector('.data-column[column="team"]').firstElementChild;
-            if (team_icons.childElementCount === 2) {
-                team_icons.lastElementChild.style.marginLeft = '-0.66rem';
+            if (config.activeSkill.noIcon) {
+                applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
+            } else {
+                addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild,
+                    type, id, center.skills[id].skill.display_value_text);
             }
-            team_icons.lastElementChild.style.marginRight = '-0.1rem';
 
-            let skill_icon = document.createElement('img');
-            skill_icon.classList.add('team-theme', 'icon');
-            skill_icon.src = SKILL_ICONS[type];
-            skill_icon.setAttribute('tooltip', display_value_text);
-
-            team_icons.appendChild(skill_icon);
         }
+    }
+
+    function applySkillColor(nickname, color) {
+        // remove clubmate class from League++ so clubmates get colored correctly too
+        nickname.classList.remove("clubmate");
+        nickname.style.color = color;
+    }
+
+    function addSkillIcon(team_icons, type, id, tooltip) {
+        // move the icons a little closer together
+        team_icons.lastElementChild.style.marginRight = '-0.1rem';
+        if (team_icons.childElementCount === 2) {
+            // this will overlap the two theme elements to save space
+            team_icons.lastElementChild.style.marginLeft = '-0.66rem';
+        }
+
+        let skill_icon = document.createElement('img');
+        skill_icon.classList.add('team-theme', 'icon');
+        skill_icon.src = getSkillIcon(type);
+        skill_icon.setAttribute('tooltip', tooltip);
+
+        team_icons.appendChild(skill_icon);
     }
 
     function getScoreColor(lostPoints)
@@ -331,6 +333,40 @@
             return "#32bc4f"; // rare
         } else {
             return "#676767"; // grey
+        }
+    }
+
+    function getSkillByElement(element, ocd) {
+        switch (element) {
+            case 'fire':
+            case 'water':
+                return {type: 'execute', id: 14, color: ocd ? '#66cd00' : '#32bc4f'};
+            case 'nature':
+            case 'psychic':
+                return {type: 'reflect', id: 13, color: ocd ? '#b968e6' : '#ec0039'};
+            case 'light':
+            case 'stone':
+                return {type: 'shield', id: 12, color: ocd ? '#ffa500' : '#ffb244'};
+            case 'darkness':
+            case 'sun':
+                return {type: 'stun', id: 11, color: ocd ? '#14b4d9' : '#d561e6'};
+            default:
+                throw 'Unknown element: ' + element;
+        }
+    }
+
+    function getSkillIcon(type) {
+        switch (type) {
+            case 'execute':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/execute_icon.png';
+            case 'reflect':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/reflect_icon.png';
+            case 'shield':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/shield_icon.png';
+            case 'stun':
+                return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/stun_icon.png';
+            default:
+                throw 'Unknown skill type: ' + type;
         }
     }
 
@@ -441,6 +477,8 @@
             },
             activeSkill: {
                 enabled: false,
+                noIcon: false,
+                ocd: false,
             }
         };
 
@@ -501,11 +539,18 @@
                 baseKey: 'activeSkill',
                 label: 'Add active skill icon to the team column',
                 default: false,
+                subSettings: [
+                    { key: 'noIcon', default: false, label: 'Instead of an icon apply color to the name' },
+                    { key: 'ocd', default: false, label: 'Use the same colors as OCD' },
+                ],
             },
-            run() {
+            run(subSettings) {
                 config.activeSkill = {
                     enabled: true,
+                    noIcon: subSettings.noIcon,
+                    ocd: subSettings.ocd,
                 };
+                config.scoreColor.name &= !subSettings.noIcon;
             },
         });
         config.activeSkill.enabled = false;
