@@ -292,7 +292,7 @@
     function markActiveSkill(opponentRow, id) {
         const center = OPPONENTS_BY_ID[id].player.team.girls[0];
 
-        if (center.skill_tiers_info['5'].skill_points_used) {
+        if (center.skill_tiers_info['5']?.skill_points_used) {
             const {type, id, color} = getSkillByElement(center.girl.element, config.activeSkill.ocd);
 
             if (config.activeSkill.noIcon) {
