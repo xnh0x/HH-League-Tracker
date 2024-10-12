@@ -19,7 +19,7 @@
 // @match        https://*.transpornstarharem.com/home.html*
 // @match        https://*.hornyheroes.com/leagues.html*
 // @match        https://*.hornyheroes.com/home.html*
-// @run-at       document-end
+// @run-at       document-body
 // @namespace    https://github.com/xnh0x/HH-League-Tracker
 // @updateURL    https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/master/HHLeagueTracker.user.js
 // @downloadURL  https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/master/HHLeagueTracker.user.js
@@ -41,6 +41,8 @@
     if(window.location.pathname !== '/leagues.html') {
         return;
     }
+
+    addCSS();
 
     const NUMBER_FORMATTER = Intl.NumberFormat('en', { notation: 'compact', signDisplay: "exceptZero" }).format;
     const PERCENT_FORMATTER = Intl.NumberFormat('en', { minimumFractionDigits : 1, maximumFractionDigits : 1, signDisplay: "exceptZero" }).format;
@@ -100,11 +102,6 @@
     await leagueTracker(true);
 
     async function leagueTracker(firstRun) {
-        if (document.querySelector('#leagues div.league_girl') === null) {
-            setTimeout(leagueTracker, 5, firstRun);
-            return;
-        }
-
         // load local data in case the read from GitHub fails
         let oldOpponentScores = {
             data: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) || {},
@@ -139,10 +136,6 @@
         let newOpponentStats = {};
 
         function updateTable() {
-            let opponentRows = document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row');
-            for (let i = 0; i < opponentRows.length; i++) {
-                const opponentRow = opponentRows[i];
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
             document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
                 opponentRow => {
                     const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
@@ -181,6 +174,15 @@
             _args.push( args[i] );
         }
         console.log.apply( console, _args );
+    }
+
+    function addCSS() {
+        let sheet = document.createElement("style");
+        sheet.textContent = [
+            // remove white blob below challenge results
+            '.result { box-shadow: none !important; }',
+        ].join(' ');
+        document.head.appendChild(sheet);
     }
 
     function updateScore(opponentRow, id, oldData)
