@@ -83,6 +83,20 @@
         }
     }
 
+    // check if a new league started and reset local storage and
+    const STORED_LEAGUE_END_TS = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.leagueEnd)) || Infinity;
+    localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
+    if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
+        info('new league has started, deleting old data from local storage')
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.scores);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.stats);
+        if (config.githubStorage.enabled) {
+            await commitNewFile();
+            // give GitHub a moment to process the new file
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
     await leagueTracker(true);
 
     async function leagueTracker(firstRun) {
@@ -121,16 +135,6 @@
 
         let oldOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
-        // check and reset local storage for new league
-        const STORED_LEAGUE_END_TS = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.leagueEnd)) || Infinity;
-        if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
-            info('new league has started, deleting old data from local storage')
-            if (!config.githubStorage.enabled) {
-                oldOpponentScores = { data: {} };
-            }
-            oldOpponentStats = {};
-        }
-
         let newOpponentScores = {};
         let newOpponentStats = {};
 
@@ -159,8 +163,6 @@
         }
         // stat changes don't really need to be shared between devices so local storage is sufficient
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(newOpponentStats));
-        // remember new league end
-        localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
     }
 
     function info() {
