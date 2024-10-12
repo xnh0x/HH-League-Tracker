@@ -309,8 +309,9 @@
             if (config.activeSkill.noIcon) {
                 applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
             } else {
+                const tooltip = type + ' ' + center.skills[id].skill.display_value_text;
                 addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild,
-                    type, id, center.skills[id].skill.display_value_text);
+                    type, id, tooltip);
             }
 
         }
