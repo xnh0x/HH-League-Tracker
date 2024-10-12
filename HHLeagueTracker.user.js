@@ -25,13 +25,18 @@
 // @downloadURL  https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/master/HHLeagueTracker.user.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com
 // @grant        unsafeWindow
+// @grant        GM_info
 // ==/UserScript==
 
 (async function (window) {
     'use strict';
     /*global shared,opponents_list,$*/
 
+    info('version:', GM_info.script.version)
+
     const config = await loadConfig();
+
+    info('config:', config);
 
     if(window.location.pathname !== '/leagues.html') {
         return;
@@ -58,7 +63,7 @@
 
     if (config.githubStorage.enabled) {
         if (!window.LeagueTrackerGitHubConfig) {
-            log('GitHubConfig missing, using localStorage')
+            info('GitHubConfig missing, using localStorage')
             config.githubStorage.enabled = false;
         } else {
             GITHUB_CONFIG = window.LeagueTrackerGitHubConfig;
@@ -91,19 +96,19 @@
                 oldOpponentScores = await readFromGithub();
             } catch (e) {
                 if (firstRun && e.status === 404) {
-                    log(GITHUB_CONFIG.path + ' doesn\'t exist yet')
+                    info(GITHUB_CONFIG.path + ' doesn\'t exist yet')
                     try {
                         await commitNewFile();
                     } catch (f) {
-                        console.log(f);
+                        info(f);
                     }
-                    log('restart script');
+                    info('restart script');
                     setTimeout(leagueTracker, 500, false);
                     return;
                 } else if (e.status === 401) {
-                    log('check github config, token not valid for repo, using localStorage')
+                    info('check github config, token not valid for repo, using localStorage')
                 } else {
-                    log('couldn\'t read data from github, using localStorage');
+                    info('couldn\'t read data from github, using localStorage');
                 }
                 config.githubStorage.enabled = false;
             }
@@ -114,7 +119,7 @@
         // check and reset local storage for new league
         const STORED_LEAGUE_END_TS = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.leagueEnd)) || Infinity;
         if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
-            log('new league has started, deleting old data from local storage')
+            info('new league has started, deleting old data from local storage')
             if (!config.githubStorage.enabled) {
                 oldOpponentScores = { data: {} };
             }
@@ -153,8 +158,17 @@
         localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
     }
 
-    function log(message) {
-        console.log('HH League Tracker: ' + message)
+    function info() {
+        log('', arguments);
+    }
+
+    function log(tag, args) {
+        let _args = ['League Tracker:' + tag];
+        // _args.push('League Tracker:' + tag);
+        for( let i = 0; i < args.length; i++ ) {
+            _args.push( args[i] );
+        }
+        console.log.apply( console, _args );
     }
 
     function updateScore(opponentRow, id, oldData)
@@ -397,7 +411,7 @@
     }
 
     async function readFromGithub() {
-        log('reading ' + GITHUB_CONFIG.path);
+        info('reading ' + GITHUB_CONFIG.path);
         const params = {
             owner: GITHUB_CONFIG.owner,
             repo: GITHUB_CONFIG.repo,
@@ -407,7 +421,6 @@
             },
         }
         const response = await OCTOKIT.rest.repos.getContent(params);
-        console.log(response);
         return {
             data: JSON.parse(atob(response.data.content)), // file content needs to be decoded from base64
             sha: response.data.sha, // required to write an update later
@@ -419,7 +432,7 @@
     }
 
     async function commitNewFile() {
-        log('creating ' + GITHUB_CONFIG.path);
+        info('creating ' + GITHUB_CONFIG.path);
         const message = commitMessage('create');
         const content = btoa('{}'); // needs to be encoded in base64
         await writeToGithub(content, message);
@@ -427,10 +440,10 @@
 
     async function commitUpdate(oldData, sha, data) {
         if (isEqual(oldData, data)) {
-            log('nothing changed, no need to update');
+            info('nothing changed, no need to update');
             return;
         }
-        log('updating ' + GITHUB_CONFIG.path);
+        info('updating ' + GITHUB_CONFIG.path);
         const message = commitMessage('update');
         const content = btoa(JSON.stringify(data, null, 2)); // needs to be encoded in base64
         await writeToGithub(content, message, sha);
