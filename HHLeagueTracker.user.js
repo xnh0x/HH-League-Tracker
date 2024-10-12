@@ -166,12 +166,12 @@
     }
 
     function info() {
-        log('', arguments);
+        log(arguments);
     }
 
-    function log(tag, args) {
-        let _args = ['League Tracker:' + tag];
-        // _args.push('League Tracker:' + tag);
+    function log(args, tag = null) {
+        let _args = ['League Tracker:'];
+        if (tag) { _args.push(tag); }
         for( let i = 0; i < args.length; i++ ) {
             _args.push( args[i] );
         }
