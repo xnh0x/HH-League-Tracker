@@ -174,7 +174,7 @@
 
     function debug() {
         if (config.debug.enabled) {
-            log(' [DEBUG]', arguments);
+            log(arguments, '[DEBUG]');
         }
     }
 
@@ -479,7 +479,7 @@
         if (sha) {
             params.sha = sha // to write an update sha is required
         }
-        const response = OCTOKIT.rest.repos.createOrUpdateFileContents(params);
+        const response = await OCTOKIT.rest.repos.createOrUpdateFileContents(params);
         debug(response);
     }
 
