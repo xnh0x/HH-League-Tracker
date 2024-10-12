@@ -171,13 +171,11 @@
     }
 
     function debug() {
-        if (config.debug.enabled) {
-            log(arguments, '[DEBUG]');
-        }
+        log(arguments, '[DEBUG]');
     }
 
     function log(args, tag = null) {
-        let _args = ['League Tracker:'];
+        let _args = ['League Tracker Dev:'];
         if (tag) { _args.push(tag); }
         for( let i = 0; i < args.length; i++ ) {
             _args.push( args[i] );
@@ -501,9 +499,6 @@
     {
         // defaults
         let config = {
-            debug: {
-                enabled: false,
-            },
             githubStorage: {
                 enabled: false,
             },
@@ -531,21 +526,6 @@
             key: 'LeagueTracker',
             name: 'League Tracker'
         });
-
-        hhPlusPlusConfig.registerModule({
-            group: 'LeagueTracker',
-            configSchema: {
-                baseKey: 'debug',
-                label: 'Debug log',
-                default: false,
-            },
-            run() {
-                config.debug = {
-                    enabled: true,
-                };
-            },
-        });
-        config.debug.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
