@@ -143,13 +143,18 @@
             for (let i = 0; i < opponentRows.length; i++) {
                 const opponentRow = opponentRows[i];
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+            document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+                opponentRow => {
+                    const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
-                newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
-                if (config.activeSkill.enabled) {
-                    markActiveSkill(opponentRow, id);
+                    newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
+                    newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
+                    if (config.activeSkill.enabled) {
+                        markActiveSkill(opponentRow, id);
+                    }
+
                 }
-            }
+            )
         }
 
         updateTable();
