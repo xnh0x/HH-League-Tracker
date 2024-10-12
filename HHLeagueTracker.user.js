@@ -554,7 +554,7 @@
             configSchema: {
                 baseKey: 'activeSkill',
                 label: 'Add active skill icon to the team column',
-                default: false,
+                default: true,
                 subSettings: [
                     { key: 'noIcon', default: false, label: 'Instead of an icon apply color to the name' },
                     { key: 'ocd', default: false, label: 'Use the same colors as OCD' },
