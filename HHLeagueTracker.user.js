@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker Dev
-// @version      1.2.1
+// @version      1.3
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -85,15 +85,17 @@
 
     // check if a new league started and reset local storage and
     const STORED_LEAGUE_END_TS = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.leagueEnd)) || Infinity;
+    localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
     if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
         info('new league has started, deleting old data from local storage')
         localStorage.removeItem(LOCAL_STORAGE_KEYS.scores);
         localStorage.removeItem(LOCAL_STORAGE_KEYS.stats);
         if (config.githubStorage.enabled) {
             await commitNewFile();
+            // give GitHub a moment to process the new file
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
-    localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
 
     await leagueTracker(true);
 
