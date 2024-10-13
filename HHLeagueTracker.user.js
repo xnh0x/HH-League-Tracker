@@ -181,6 +181,10 @@
         sheet.textContent = [
             // remove white blob below challenge results
             '.result { box-shadow: none !important; }',
+            // shadow to improve readability in some games
+            '.data-column:not(.head-column) { text-shadow: 1px 1px 0px #000 !important; }',
+            // reduce line height to fit two lines of text in the row
+            '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
         ].join(' ');
         document.head.appendChild(sheet);
     }
@@ -221,17 +225,6 @@
                 opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = scoreColor;
             }
         }
-
-        // shadow to make text more readable on some games
-        opponentRow.querySelector('.data-column[column="place"]').style.textShadow = "1px 1px 0px #000000";
-        opponentRow.querySelector('.data-column[column="nickname"]').style.textShadow = "1px 1px 0px #000000";
-        opponentRow.querySelector('.data-column[column="level"]').style.textShadow = "1px 1px 0px #000000";
-        opponentRow.querySelector('.data-column[column="power"]').style.textShadow = "1px 1px 0px #000000";
-        opponentRow.querySelector('.data-column[column="player_league_points"]').style.textShadow = "1px 1px 0px #000000";
-        opponentRow.querySelector('.data-column[column="team"]').style.textShadow = "1px 1px 0px #000000";
-
-        opponentRow.querySelector('.data-column[column="player_league_points"]').style.textAlign = "right";
-        opponentRow.querySelector('.data-column[column="player_league_points"]').style.lineHeight = "15px";
 
         if (gainedScore > 0) {
             lastDiff = gainedScore;
