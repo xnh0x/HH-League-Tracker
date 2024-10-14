@@ -1,6 +1,25 @@
 # HH-League-Tracker
 
-Tracks opponents lost points and highlights stat changes. Can use optionally use GitHub to sync data between devices. You'll need HH++ for the configuration.
+![HH_League_Tracker](https://github.com/user-attachments/assets/84114d70-9528-4036-a0d0-057d3a7ea4de)
+
+Requires [HH++ BDSM](https://github.com/zoop0kemon/hh-plus-plus) for the configuration.
+
+### Score Tracking
+Keeps counting everyones lost points and colors them based on the total amount lost. Optionally uses GitHub to sync data between devices.
+
+![Score_Tracking](https://github.com/user-attachments/assets/a2464dda-f733-4e17-a19a-8b53db8c8639)
+
+### Stat Tracking
+Highlights stat changes.
+
+![Stat_Tracking](https://github.com/user-attachments/assets/13ed9fb5-16c1-4bd9-b2ca-27ca82640a6f)
+
+
+### Skill Icons (requires HH++ BDSM)
+Adds icons for the active skill to the team column. Optionally colors the player names instead like OCD does.
+
+![Skill_Icons](https://github.com/user-attachments/assets/e1b10349-4d2f-4b60-81c6-23e21e0afb70)
+
 
 ## Install
 
@@ -14,7 +33,7 @@ Tested on iOS Safari with the [Stay](https://apps.apple.com/us/app/stay-for-safa
 
 ### Prepare Repo
 
-- Create a new repo e.g. "League-Tracker-Storage". You can set visibility to private but it doesn't really matter.
+- Create a new repo e.g. "League-Tracker-Storage". You can set visibility to private.
 - Go to https://github.com/settings/tokens?type=beta and click generate a new token. This will be used by the script to read and write the data.
 - Give it a name, choose and expiry date and under "Repository access" pick "Only select repositories" and choose only the new repo you created:
 
