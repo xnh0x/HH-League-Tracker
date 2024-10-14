@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker Dev
-// @version      1.3
+// @version      1.3.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -57,6 +57,7 @@
     const LOCAL_STORAGE_KEYS = {
         scores: 'HHLeagueTrackerScoreData',
         stats: 'HHLeagueTrackerStatData',
+        teams: 'HHLeagueTrackerTeamData',
         leagueEnd: 'HHLeagueTrackerLeagueEnd'
     }
 
@@ -91,6 +92,7 @@
     if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
         info('new league has started, deleting old data from local storage')
         localStorage.removeItem(LOCAL_STORAGE_KEYS.scores);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.teams);
         localStorage.removeItem(LOCAL_STORAGE_KEYS.stats);
         if (config.githubStorage.enabled) {
             await commitNewFile();
@@ -133,9 +135,11 @@
             }
         }
 
+        let oldOpponentTeams = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.teams)) || {};
         let oldOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
         let newOpponentScores = {};
+        let newOpponentTeams = {};
         let newOpponentStats = {};
 
         function updateTable() {
@@ -148,7 +152,9 @@
                     if (config.activeSkill.enabled) {
                         markActiveSkill(opponentRow, id);
                     }
-
+                    if (config.usedTeams.enabled) {
+                        newOpponentTeams[id] = updateUsedTeams(opponentRow, id, oldOpponentTeams[id] || {});
+                    }
                 }
             )
         }
@@ -162,6 +168,7 @@
             // write score data to GitHub
             await commitUpdate(oldOpponentScores.data, oldOpponentScores.sha, newOpponentScores);
         }
+        localStorage.setItem(LOCAL_STORAGE_KEYS.teams, JSON.stringify(newOpponentTeams));
         // stat changes don't really need to be shared between devices so local storage is sufficient
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(newOpponentStats));
     }
@@ -318,8 +325,7 @@
                 applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
             } else {
                 const tooltip = type + ' ' + center.skills[id].skill.display_value_text;
-                addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild,
-                    type, id, tooltip);
+                addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild, type, tooltip);
             }
 
         }
@@ -331,20 +337,49 @@
         nickname.style.color = color;
     }
 
-    function addSkillIcon(team_icons, type, id, tooltip) {
+    function addSkillIcon(team_icons, type, tooltip) {
         // move the icons a little closer together
-        team_icons.lastElementChild.style.marginRight = '-0.1rem';
+        team_icons.lastElementChild.style.marginRight = '-0.15rem';
         if (team_icons.childElementCount === 2) {
             // this will overlap the two theme elements to save space
             team_icons.lastElementChild.style.marginLeft = '-0.66rem';
         }
+        team_icons.appendChild(getSkillIcon(type, tooltip));
+    }
 
-        let skill_icon = document.createElement('img');
-        skill_icon.classList.add('team-theme', 'icon');
-        skill_icon.src = getSkillIcon(type);
-        skill_icon.setAttribute('tooltip', tooltip);
+    function updateUsedTeams(opponentRow, id, oldTeams) {
+        let oldTeamsSet = oldTeams.length ? new Set(oldTeams) : new Set();
+        const opponentTeam = OPPONENTS_BY_ID[id].player.team;
+        let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
+            ? getSkillByElement(opponentTeam.girls[0].girl.element).type
+            : null;
+        oldTeamsSet.add(JSON.stringify({ theme: opponentTeam.theme, type: type }));
+        const newTeams= Array.from(oldTeamsSet).sort();
 
-        team_icons.appendChild(skill_icon);
+        let tooltip = document.createElement('div');
+        tooltip.innerText = 'Used Teams:';
+        newTeams.forEach((t)=>{
+            let team = JSON.parse(t);
+            let div = document.createElement('div');
+            team.theme.split(',').forEach((element)=>{
+                let elementIcon = getElementIcon(element);
+                elementIcon.style.height = '16px';
+                elementIcon.style.width = '16px';
+                elementIcon.style.marginRight = '-8px';
+                div.appendChild(elementIcon);
+            });
+            div.lastElementChild.style.marginRight = '0';
+            if (team.type && team.type !== 'none') {
+                let skillIcon = getSkillIcon(team.type);
+                skillIcon.style.height = '16px';
+                skillIcon.style.width = '16px';
+                div.appendChild(skillIcon);
+            }
+            tooltip.appendChild(div);
+        })
+
+        opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML)
+        return newTeams
     }
 
     function getScoreColor(lostPoints)
@@ -362,7 +397,7 @@
         }
     }
 
-    function getSkillByElement(element, ocd) {
+    function getSkillByElement(element, ocd = false) {
         switch (element) {
             case 'fire':
             case 'water':
@@ -381,7 +416,15 @@
         }
     }
 
-    function getSkillIcon(type) {
+    function getSkillIcon(type, tooltip = null) {
+        let skill_icon = document.createElement('img');
+        skill_icon.classList.add('team-theme', 'icon');
+        skill_icon.src = getSkillIconSrc(type);
+        if (tooltip) skill_icon.setAttribute('tooltip', tooltip);
+        return skill_icon;
+    }
+
+    function getSkillIconSrc(type) {
         switch (type) {
             case 'execute':
                 return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/execute_icon.png';
@@ -393,6 +436,38 @@
                 return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/stun_icon.png';
             default:
                 throw 'Unknown skill type: ' + type;
+        }
+    }
+
+    function getElementIcon(element) {
+        let element_icon = document.createElement('img');
+        element_icon.classList.add('team-theme', 'icon');
+        element_icon.src = getElementIconSrc(element);
+        return element_icon;
+    }
+
+    function getElementIconSrc(element) {
+        switch (element) {
+            case '':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Multicolored.png';
+            case 'darkness':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Dominatrix.png';
+            case 'fire':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Eccentric.png';
+            case 'light':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Submissive.png';
+            case 'nature':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Exhibitionist.png';
+            case 'psychic':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Voyeurs.png';
+            case 'stone':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Physical.png';
+            case 'sun':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Playful.png';
+            case 'water':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Sensual.png';
+            default:
+                throw 'Unknown element: ' + element;
         }
     }
 
@@ -506,7 +581,10 @@
                 enabled: false,
                 noIcon: false,
                 ocd: false,
-            }
+            },
+            usedTeams: {
+                enabled: false,
+            },
         };
 
         // changing config requires HH++
@@ -581,6 +659,21 @@
             },
         });
         config.activeSkill.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'usedTeams',
+                label: 'Keep a list of used teams',
+                default: false,
+            },
+            run() {
+                config.usedTeams = {
+                    enabled: true,
+                };
+            },
+        });
+        config.usedTeams.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
