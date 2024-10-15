@@ -55,8 +55,10 @@
     let OCTOKIT, GITHUB_CONFIG;
 
     const LOCAL_STORAGE_KEYS = {
-        scores: 'HHLeagueTrackerScoreData',
+        data: 'HHLeagueTrackerData',
+        scores: 'HHLeagueTrackerScoreData', // XXX remove in 1.5
         stats: 'HHLeagueTrackerStatData',
+        teams: 'HHLeagueTrackerTeamData', // XXX remove in 1.5
         leagueEnd: 'HHLeagueTrackerLeagueEnd'
     }
 
@@ -90,7 +92,9 @@
     localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
     if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
         info('new league has started, deleting old data from local storage')
-        localStorage.removeItem(LOCAL_STORAGE_KEYS.scores);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.data);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.scores); // XXX remove in 1.5
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.teams); // XXX remove in 1.5
         localStorage.removeItem(LOCAL_STORAGE_KEYS.stats);
         if (config.githubStorage.enabled) {
             await commitNewFile();
@@ -103,13 +107,15 @@
 
     async function leagueTracker(firstRun) {
         // load local data in case the read from GitHub fails
-        let oldOpponentScores = {
-            data: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) || {},
+        let oldOpponentData = {
+            data: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.data))
+                || JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) // XXX remove in 1.5
+                || {},
         };
 
         if (config.githubStorage.enabled) {
             try {
-                oldOpponentScores = await readFromGithub();
+                oldOpponentData = await readFromGithub();
             } catch (e) {
                 if (firstRun && e.status === 404) {
                     info(GITHUB_CONFIG.path + ' doesn\'t exist yet')
@@ -130,22 +136,23 @@
             }
         }
 
-        let oldOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
-
-        let newOpponentScores = {};
-        let newOpponentStats = {};
+        let newOpponentData = structuredClone(oldOpponentData.data);
+        let newOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
         function updateTable() {
             document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
                 opponentRow => {
                     const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                    newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
-                    newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
+                    newOpponentData[id] = updateScore(opponentRow, id, newOpponentData[id] || {});
+                    newOpponentStats[id] = updateStats(opponentRow, id, newOpponentStats[id] || {});
                     if (config.activeSkill.enabled) {
                         markActiveSkill(opponentRow, id);
                     }
-
+                    // no need to collect your own teams
+                    if (config.usedTeams.enabled && id !== shared.Hero.infos.id) {
+                        newOpponentData[id] = updateUsedTeams(opponentRow, id, newOpponentData[id] || {});
+                    }
                 }
             )
         }
@@ -154,10 +161,10 @@
         // redo changes after sorting the table
         $(document).on('league:table-sorted', () => { updateTable(); })
 
-        localStorage.setItem(LOCAL_STORAGE_KEYS.scores, JSON.stringify(newOpponentScores));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.scores, JSON.stringify(newOpponentData));
         if (config.githubStorage.enabled) {
             // write score data to GitHub
-            await commitUpdate(oldOpponentScores.data, oldOpponentScores.sha, newOpponentScores);
+            await commitUpdate(oldOpponentData.data, oldOpponentData.sha, newOpponentData);
         }
         // stat changes don't really need to be shared between devices so local storage is sufficient
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(newOpponentStats));
@@ -310,8 +317,7 @@
                 applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
             } else {
                 const tooltip = type + ' ' + center.skills[id].skill.display_value_text;
-                addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild,
-                    type, id, tooltip);
+                addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild, type, tooltip);
             }
 
         }
@@ -323,20 +329,49 @@
         nickname.style.color = color;
     }
 
-    function addSkillIcon(team_icons, type, id, tooltip) {
+    function addSkillIcon(team_icons, type, tooltip) {
         // move the icons a little closer together
-        team_icons.lastElementChild.style.marginRight = '-0.1rem';
+        team_icons.lastElementChild.style.marginRight = '-0.15rem';
         if (team_icons.childElementCount === 2) {
             // this will overlap the two theme elements to save space
             team_icons.lastElementChild.style.marginLeft = '-0.66rem';
         }
+        team_icons.appendChild(getSkillIcon(type, tooltip));
+    }
 
-        let skill_icon = document.createElement('img');
-        skill_icon.classList.add('team-theme', 'icon');
-        skill_icon.src = getSkillIcon(type);
-        skill_icon.setAttribute('tooltip', tooltip);
+    function updateUsedTeams(opponentRow, id, oldData) {
+        let oldTeamsSet = oldData.teams?.length ? new Set(oldData.teams) : new Set();
+        const opponentTeam = OPPONENTS_BY_ID[id].player.team;
+        let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
+            ? getSkillByElement(opponentTeam.girls[0].girl.element).type
+            : null;
+        oldTeamsSet.add(JSON.stringify({ theme: opponentTeam.theme, type: type }));
+        const teams= Array.from(oldTeamsSet).sort();
 
-        team_icons.appendChild(skill_icon);
+        let tooltip = document.createElement('div');
+        tooltip.innerText = 'Used Teams:';
+        teams.forEach((t)=>{
+            let team = JSON.parse(t);
+            let div = document.createElement('div');
+            team.theme.split(',').forEach((element)=>{
+                let elementIcon = getElementIcon(element);
+                elementIcon.style.height = '16px';
+                elementIcon.style.width = '16px';
+                elementIcon.style.marginRight = '-8px';
+                div.appendChild(elementIcon);
+            });
+            div.lastElementChild.style.marginRight = '0';
+            if (team.type && team.type !== 'none') {
+                let skillIcon = getSkillIcon(team.type);
+                skillIcon.style.height = '16px';
+                skillIcon.style.width = '16px';
+                div.appendChild(skillIcon);
+            }
+            tooltip.appendChild(div);
+        })
+
+        opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML)
+        return {...oldData, teams}
     }
 
     function getScoreColor(lostPoints)
@@ -354,7 +389,7 @@
         }
     }
 
-    function getSkillByElement(element, ocd) {
+    function getSkillByElement(element, ocd = false) {
         switch (element) {
             case 'fire':
             case 'water':
@@ -373,7 +408,15 @@
         }
     }
 
-    function getSkillIcon(type) {
+    function getSkillIcon(type, tooltip = null) {
+        let skill_icon = document.createElement('img');
+        skill_icon.classList.add('team-theme', 'icon');
+        skill_icon.src = getSkillIconSrc(type);
+        if (tooltip) skill_icon.setAttribute('tooltip', tooltip);
+        return skill_icon;
+    }
+
+    function getSkillIconSrc(type) {
         switch (type) {
             case 'execute':
                 return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp3_active_skills/execute_icon.png';
@@ -385,6 +428,38 @@
                 return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/stun_icon.png';
             default:
                 throw 'Unknown skill type: ' + type;
+        }
+    }
+
+    function getElementIcon(element) {
+        let element_icon = document.createElement('img');
+        element_icon.classList.add('team-theme', 'icon');
+        element_icon.src = getElementIconSrc(element);
+        return element_icon;
+    }
+
+    function getElementIconSrc(element) {
+        switch (element) {
+            case '':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Multicolored.png';
+            case 'darkness':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Dominatrix.png';
+            case 'fire':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Eccentric.png';
+            case 'light':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Submissive.png';
+            case 'nature':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Exhibitionist.png';
+            case 'psychic':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Voyeurs.png';
+            case 'stone':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Physical.png';
+            case 'sun':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Playful.png';
+            case 'water':
+                return 'https://hh.hh-content.com/pictures/girls_elements/Sensual.png';
+            default:
+                throw 'Unknown element: ' + element;
         }
     }
 
@@ -496,7 +571,10 @@
                 enabled: false,
                 noIcon: false,
                 ocd: false,
-            }
+            },
+            usedTeams: {
+                enabled: false,
+            },
         };
 
         // changing config requires HH++
@@ -571,6 +649,21 @@
             },
         });
         config.activeSkill.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'usedTeams',
+                label: 'Keep a list of used teams for your opponents (tooltip on team power)',
+                default: false,
+            },
+            run() {
+                config.usedTeams = {
+                    enabled: true,
+                };
+            },
+        });
+        config.usedTeams.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
