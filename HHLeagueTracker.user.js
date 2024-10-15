@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.3
+// @version      1.3.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -247,7 +247,7 @@
                     '<br>Last Lost Points: ' + lastLostPoints);
             }
         }
-        return {nickname, score, totalLostPoints, lastDiff, lastLostPoints, lastChangeTime};
+        return {...oldData, nickname, score, totalLostPoints, lastDiff, lastLostPoints, lastChangeTime};
     }
 
     function updateStats(opponentRow, id, oldData)
@@ -256,7 +256,7 @@
             'damage': {'div':'#player_attack_stat', 'span':'#stats-damage'},
             'remaining_ego': {'div':'#player_ego_stat', 'span':'#stats-ego'},
             'defense': {'div':'#player_defence_stat', 'span':'#stats-defense'},
-            'chance': {'div':'#player_harmony_stat', 'span':'#stats-chance'}
+            'chance': {'div':'#player_harmony_stat', 'span':'#stats-chance'},
         };
         const opponent = OPPONENTS_BY_ID[id];
 
@@ -297,7 +297,7 @@
             }
             newStats[stat] = {value, lastDiff, lastChangeTime};
         }
-        return newStats;
+        return {...oldData, ...newStats};
     }
 
     function markActiveSkill(opponentRow, id) {
