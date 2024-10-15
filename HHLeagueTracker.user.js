@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker Dev
-// @version      1.3.1
+// @version      1.3.4
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -55,9 +55,10 @@
     let OCTOKIT, GITHUB_CONFIG;
 
     const LOCAL_STORAGE_KEYS = {
-        scores: 'HHLeagueTrackerScoreData',
+        data: 'HHLeagueTrackerData',
+        scores: 'HHLeagueTrackerScoreData', // XXX remove in 1.5
         stats: 'HHLeagueTrackerStatData',
-        teams: 'HHLeagueTrackerTeamData',
+        teams: 'HHLeagueTrackerTeamData', // XXX remove in 1.5
         leagueEnd: 'HHLeagueTrackerLeagueEnd'
     }
 
@@ -91,8 +92,9 @@
     localStorage.setItem(LOCAL_STORAGE_KEYS.leagueEnd, JSON.stringify(LEAGUE_END_TS));
     if (STORED_LEAGUE_END_TS < LEAGUE_END_TS) {
         info('new league has started, deleting old data from local storage')
-        localStorage.removeItem(LOCAL_STORAGE_KEYS.scores);
-        localStorage.removeItem(LOCAL_STORAGE_KEYS.teams);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.data);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.scores); // XXX remove in 1.5
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.teams); // XXX remove in 1.5
         localStorage.removeItem(LOCAL_STORAGE_KEYS.stats);
         if (config.githubStorage.enabled) {
             await commitNewFile();
@@ -105,13 +107,15 @@
 
     async function leagueTracker(firstRun) {
         // load local data in case the read from GitHub fails
-        let oldOpponentScores = {
-            data: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) || {},
+        let oldOpponentData = {
+            data: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.data))
+                || JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) // XXX remove in 1.5
+                || {},
         };
 
         if (config.githubStorage.enabled) {
             try {
-                oldOpponentScores = await readFromGithub();
+                oldOpponentData = await readFromGithub();
             } catch (e) {
                 if (firstRun && e.status === 404) {
                     info(GITHUB_CONFIG.path + ' doesn\'t exist yet')
@@ -135,25 +139,22 @@
             }
         }
 
-        let oldOpponentTeams = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.teams)) || {};
-        let oldOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
-
-        let newOpponentScores = {};
-        let newOpponentTeams = {};
-        let newOpponentStats = {};
+        let newOpponentData = structuredClone(oldOpponentData.data);
+        let newOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
         function updateTable() {
             document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
                 opponentRow => {
                     const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                    newOpponentScores[id] = updateScore(opponentRow, id, oldOpponentScores.data[id] || {});
-                    newOpponentStats[id] = updateStats(opponentRow, id, oldOpponentStats[id] || {});
+                    newOpponentData[id] = updateScore(opponentRow, id, newOpponentData[id] || {});
+                    newOpponentStats[id] = updateStats(opponentRow, id, newOpponentStats[id] || {});
                     if (config.activeSkill.enabled) {
                         markActiveSkill(opponentRow, id);
                     }
-                    if (config.usedTeams.enabled) {
-                        newOpponentTeams[id] = updateUsedTeams(opponentRow, id, oldOpponentTeams[id] || {});
+                    // no need to collect your own teams
+                    if (config.usedTeams.enabled && id !== shared.Hero.infos.id) {
+                        newOpponentData[id] = updateUsedTeams(opponentRow, id, newOpponentData[id] || {});
                     }
                 }
             )
@@ -163,12 +164,11 @@
         // redo changes after sorting the table
         $(document).on('league:table-sorted', () => { updateTable(); })
 
-        localStorage.setItem(LOCAL_STORAGE_KEYS.scores, JSON.stringify(newOpponentScores));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.scores, JSON.stringify(newOpponentData));
         if (config.githubStorage.enabled) {
             // write score data to GitHub
-            await commitUpdate(oldOpponentScores.data, oldOpponentScores.sha, newOpponentScores);
+            await commitUpdate(oldOpponentData.data, oldOpponentData.sha, newOpponentData);
         }
-        localStorage.setItem(LOCAL_STORAGE_KEYS.teams, JSON.stringify(newOpponentTeams));
         // stat changes don't really need to be shared between devices so local storage is sufficient
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(newOpponentStats));
     }
@@ -262,7 +262,7 @@
                     '<br>Last Lost Points: ' + lastLostPoints);
             }
         }
-        return {nickname, score, totalLostPoints, lastDiff, lastLostPoints, lastChangeTime};
+        return {...oldData, nickname, score, totalLostPoints, lastDiff, lastLostPoints, lastChangeTime};
     }
 
     function updateStats(opponentRow, id, oldData)
@@ -271,7 +271,7 @@
             'damage': {'div':'#player_attack_stat', 'span':'#stats-damage'},
             'remaining_ego': {'div':'#player_ego_stat', 'span':'#stats-ego'},
             'defense': {'div':'#player_defence_stat', 'span':'#stats-defense'},
-            'chance': {'div':'#player_harmony_stat', 'span':'#stats-chance'}
+            'chance': {'div':'#player_harmony_stat', 'span':'#stats-chance'},
         };
         const opponent = OPPONENTS_BY_ID[id];
 
@@ -312,7 +312,7 @@
             }
             newStats[stat] = {value, lastDiff, lastChangeTime};
         }
-        return newStats;
+        return {...oldData, ...newStats};
     }
 
     function markActiveSkill(opponentRow, id) {
@@ -347,18 +347,18 @@
         team_icons.appendChild(getSkillIcon(type, tooltip));
     }
 
-    function updateUsedTeams(opponentRow, id, oldTeams) {
-        let oldTeamsSet = oldTeams.length ? new Set(oldTeams) : new Set();
+    function updateUsedTeams(opponentRow, id, oldData) {
+        let oldTeamsSet = oldData.teams?.length ? new Set(oldData.teams) : new Set();
         const opponentTeam = OPPONENTS_BY_ID[id].player.team;
         let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
             ? getSkillByElement(opponentTeam.girls[0].girl.element).type
             : null;
         oldTeamsSet.add(JSON.stringify({ theme: opponentTeam.theme, type: type }));
-        const newTeams= Array.from(oldTeamsSet).sort();
+        const teams= Array.from(oldTeamsSet).sort();
 
         let tooltip = document.createElement('div');
         tooltip.innerText = 'Used Teams:';
-        newTeams.forEach((t)=>{
+        teams.forEach((t)=>{
             let team = JSON.parse(t);
             let div = document.createElement('div');
             team.theme.split(',').forEach((element)=>{
@@ -379,7 +379,7 @@
         })
 
         opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML)
-        return newTeams
+        return {...oldData, teams}
     }
 
     function getScoreColor(lostPoints)
@@ -664,7 +664,7 @@
             group: 'LeagueTracker',
             configSchema: {
                 baseKey: 'usedTeams',
-                label: 'Keep a list of used teams',
+                label: 'Keep a list of used teams for your opponents (tooltip on team power)',
                 default: false,
             },
             run() {
