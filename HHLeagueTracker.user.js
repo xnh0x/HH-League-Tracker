@@ -607,7 +607,11 @@
             group: 'LeagueTracker',
             configSchema: {
                 baseKey: 'scoreColor',
-                label: 'Color players based on the amount of lost points',
+                label: `Color players based on the amount of lost points<br>`
+                    + ` <span style="color: ${getScoreColor(0)}">&le;25</span>`
+                    + ` <span style="color: ${getScoreColor(26)}">&le;50</span>`
+                    + ` <span style="color: ${getScoreColor(51)}">&le;100</span>`
+                    + ` <span style="color: ${getScoreColor(101)}">&le;200</span>`,
                 default: true,
                 subSettings: [
                     { key: 'rank', default: false, label: 'Rank' },
@@ -635,8 +639,20 @@
                 label: 'Add active skill icon to the team column',
                 default: true,
                 subSettings: [
-                    { key: 'noIcon', default: false, label: 'Instead of an icon apply color to the name' },
-                    { key: 'ocd', default: false, label: 'Use the same colors as OCD' },
+                    { key: 'noIcon', default: false,
+                        label: `Instead of an icon apply color to the player name<br>`
+                            + ` <span style="color: #ec0039">RFL</span>`
+                            + ` <span style="color: #d561e6">STN</span>`
+                            + ` <span style="color: #ffb244">SHD</span>`
+                            + ` <span style="color: #32bc4f">EXE</span>`,
+                    },
+                    { key: 'ocd', default: false,
+                        label: `Use the same colors as OCD <br>`
+                            + ` <span style="color: #b968e6">RFL</span>`
+                            + ` <span style="color: #14b4d9">STN</span>`
+                            + ` <span style="color: #ffa500">SHD</span>`
+                            + ` <span style="color: #66cd00">EXE</span>`,
+                    },
                 ],
             },
             run(subSettings) {
