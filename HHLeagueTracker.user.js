@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker Dev
-// @version      1.3.4
+// @version      1.4.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -221,7 +221,7 @@
         const totalLostPoints = oldLostPoints + newLostPoints;
 
         // add lost points below score
-        opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-lastLostPoints}`;
+        opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-totalLostPoints}`;
 
         if (config.scoreColor.enabled) {
             const scoreColor = getScoreColor(totalLostPoints)
@@ -246,9 +246,9 @@
             lastLostPoints = newLostPoints;
             lastChangeTime = Date.now();
             opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = "#16ffc4";
-            opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${lastDiff}<br>(${-lastLostPoints})`;
+            opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${lastDiff}<br>${-lastLostPoints}`;
             opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                `Total Score: ${score}<br>Total Lost Points: (-${totalLostPoints})`);
+                `Total Score: ${score}<br>Total Lost Points: -${totalLostPoints}`);
         } else if (lastDiff > 0) {
             if (lastChangeTime > 0) {
                 const timeDiff = formatTime(Date.now() - lastChangeTime);
@@ -666,7 +666,7 @@
             run(subSettings) {
                 config.activeSkill = {
                     enabled: true,
-                    noIcon: subSettings.noIcon,
+                    noIcon: subSettings.noIcon || subSettings.ocd,
                     ocd: subSettings.ocd,
                 };
                 config.scoreColor.name &= !subSettings.noIcon;
