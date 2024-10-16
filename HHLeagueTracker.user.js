@@ -656,7 +656,7 @@
             run(subSettings) {
                 config.activeSkill = {
                     enabled: true,
-                    noIcon: subSettings.noIcon,
+                    noIcon: subSettings.noIcon || subSettings.ocd,
                     ocd: subSettings.ocd,
                 };
                 config.scoreColor.name &= !subSettings.noIcon;
