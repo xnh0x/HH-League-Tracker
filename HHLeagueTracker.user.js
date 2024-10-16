@@ -80,7 +80,7 @@
             // week and minimum id of all players uniquely identify a league bracket
             const LEAGUE_ID = opponents_list.reduce((a,b) => a.player.id_fighter < b.player.id_fighter ? a : b).player.id_fighter;
             const WEEK = getWeekName(LEAGUE_END_TS);
-            GITHUB_CONFIG.path = PLATFORM + '/' + WEEK + '/' + LEAGUE_ID + '_scores.json';
+            GITHUB_CONFIG.path = `${PLATFORM}/${WEEK}/${LEAGUE_ID}_scores.json`;
             OCTOKIT = new Octokit({
                 auth: GITHUB_CONFIG.token,
             });
@@ -118,7 +118,7 @@
                 oldOpponentData = await readFromGithub();
             } catch (e) {
                 if (firstRun && e.status === 404) {
-                    info(GITHUB_CONFIG.path + ' doesn\'t exist yet')
+                    info(`${GITHUB_CONFIG.path} doesn't exist yet`)
                     try {
                         await commitNewFile();
                     } catch (f) {
@@ -213,7 +213,7 @@
         const totalLostPoints = oldLostPoints + newLostPoints;
 
         // add lost points below score
-        opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += '<br>' + (-totalLostPoints);
+        opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-lastLostPoints}`;
 
         if (config.scoreColor.enabled) {
             const scoreColor = getScoreColor(totalLostPoints)
@@ -238,20 +238,20 @@
             lastLostPoints = newLostPoints;
             lastChangeTime = Date.now();
             opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = "#16ffc4";
-            opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = '+' + lastDiff + '<br>' + (-lastLostPoints);
-            opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute(
-                'tooltip', 'Total Score: ' + score + '<br>Total Lost Points: ' + (-totalLostPoints));
+            opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${lastDiff}<br>${-lastLostPoints}`;
+            opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
+                `Total Score: ${score}<br>Total Lost Points: -${totalLostPoints}`);
         } else if (lastDiff > 0) {
             if (lastChangeTime > 0) {
                 const timeDiff = formatTime(Date.now() - lastChangeTime);
-                opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute(
-                    'tooltip', 'Last Score Diff: ' + lastDiff +
-                    '<br>Last Lost Points: ' + lastLostPoints +
-                    '<br>' + timeDiff + ' ago');
+                opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
+                    `Last Score Diff: ${lastDiff}` +
+                    `<br>Last Lost Points: ${lastLostPoints}` +
+                    `<br>${timeDiff} ago`);
             } else {
-                opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute(
-                    'tooltip', 'Last Score Diff: ' + lastDiff +
-                    '<br>Last Lost Points: ' + lastLostPoints);
+                opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
+                    `Last Score Diff: ${lastDiff}` +
+                    `<br>Last Lost Points: ${lastLostPoints}`);
             }
         }
         return {...oldData, nickname, score, totalLostPoints, lastDiff, lastLostPoints, lastChangeTime};
@@ -286,9 +286,8 @@
                     (lastChangeTime > 0) ? ((statDiff > 0) ? "#ec0039" : "#32bc4f") : "#ffffff";
                 lastDiff = statDiff;
                 lastChangeTime = (oldValue > 0) ? Date.now() : 0;
-                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute(
-                    'tooltip', 'Stat Diff: ' + NUMBER_FORMATTER(lastDiff) +
-                    ' (' + PERCENT_FORMATTER(percentage) + '%)');
+                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
+                    `Stat Diff: ${NUMBER_FORMATTER(lastDiff)} (${PERCENT_FORMATTER(percentage)}%)`);
             } else if (lastChangeTime > 0) {
                 const timeDiff = Date.now() - lastChangeTime;
                 const statColor = (timeDiff < 60 * 1000) ?
@@ -297,10 +296,9 @@
                 if (timeDiff < 10 * 60 * 1000) { // only highlight changes in the last 10 minutes
                     opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
                 }
-                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute(
-                    'tooltip', 'Last Stat Diff: ' + NUMBER_FORMATTER(lastDiff) +
-                    ' (' + PERCENT_FORMATTER(lastPercentage) + '%)' +
-                    '<br>' + formatTime(timeDiff) + ' ago');
+                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
+                    `Last Stat Diff: ${NUMBER_FORMATTER(lastDiff)} (${PERCENT_FORMATTER(lastPercentage)}%)` +
+                    `<br>${formatTime(timeDiff)} ago`);
             }
             newStats[stat] = {value, lastDiff, lastChangeTime};
         }
@@ -316,7 +314,7 @@
             if (config.activeSkill.noIcon) {
                 applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
             } else {
-                const tooltip = type + ' ' + center.skills[id].skill.display_value_text;
+                const tooltip = `${type} ${center.skills[id].skill.display_value_text}`;
                 addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild, type, tooltip);
             }
 
@@ -336,7 +334,7 @@
             // this will overlap the two theme elements to save space
             team_icons.lastElementChild.style.marginLeft = '-0.66rem';
         }
-        team_icons.appendChild(getSkillIcon(type, tooltip));
+        team_icons.appendChild(getSkillIcon(type, {tooltip}));
     }
 
     function updateUsedTeams(opponentRow, id, oldData) {
@@ -404,15 +402,15 @@
             case 'sun':
                 return {type: 'stun', id: 11, color: ocd ? '#14b4d9' : '#d561e6'};
             default:
-                throw 'Unknown element: ' + element;
+                throw `Unknown element: ${element}`;
         }
     }
 
-    function getSkillIcon(type, tooltip = null) {
+    function getSkillIcon(type, attrs = null) {
         let skill_icon = document.createElement('img');
         skill_icon.classList.add('team-theme', 'icon');
         skill_icon.src = getSkillIconSrc(type);
-        if (tooltip) skill_icon.setAttribute('tooltip', tooltip);
+        if (attrs) Object.entries(attrs).forEach(attr => skill_icon.setAttribute(...attr));
         return skill_icon;
     }
 
@@ -427,7 +425,7 @@
             case 'stun':
                 return 'https://hh.hh-content.com/pictures/design/girl_skills/pvp4_trigger_skills/stun_icon.png';
             default:
-                throw 'Unknown skill type: ' + type;
+                throw `Unknown skill type: ${type}`;
         }
     }
 
@@ -459,7 +457,7 @@
             case 'water':
                 return 'https://hh.hh-content.com/pictures/girls_elements/Sensual.png';
             default:
-                throw 'Unknown element: ' + element;
+                throw `Unknown element: ${element}`;
         }
     }
 
@@ -494,7 +492,7 @@
     }
 
     async function readFromGithub() {
-        info('reading ' + GITHUB_CONFIG.path);
+        info(`reading ${GITHUB_CONFIG.path}`);
         const params = {
             owner: GITHUB_CONFIG.owner,
             repo: GITHUB_CONFIG.repo,
@@ -511,11 +509,11 @@
     }
 
     function commitMessage(action) {
-        return (new Date()).toISOString() + ' [' + shared.Hero.infos.name + '] ' + action + ' ' + GITHUB_CONFIG.path;
+        return `${(new Date()).toISOString()} [${shared.Hero.infos.name}] ${action} ${GITHUB_CONFIG.path}`;
     }
 
     async function commitNewFile() {
-        info('creating ' + GITHUB_CONFIG.path);
+        info(`creating ${GITHUB_CONFIG.path}`);
         const message = commitMessage('create');
         const content = btoa('{}'); // needs to be encoded in base64
         await writeToGithub(content, message);
@@ -526,7 +524,7 @@
             info('nothing changed, no need to update');
             return;
         }
-        info('updating ' + GITHUB_CONFIG.path);
+        info(`updating ${GITHUB_CONFIG.path}`);
         const message = commitMessage('update');
         const content = btoa(JSON.stringify(data, null, 2)); // needs to be encoded in base64
         await writeToGithub(content, message, sha);
