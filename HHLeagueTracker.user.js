@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.4
+// @version      1.4.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -213,7 +213,7 @@
         const totalLostPoints = oldLostPoints + newLostPoints;
 
         // add lost points below score
-        opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-lastLostPoints}`;
+        opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-totalLostPoints}`;
 
         if (config.scoreColor.enabled) {
             const scoreColor = getScoreColor(totalLostPoints)
