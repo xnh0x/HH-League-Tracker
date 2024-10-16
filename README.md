@@ -14,12 +14,15 @@ Highlights stat changes.
 
 ![Stat_Tracking](https://github.com/user-attachments/assets/13ed9fb5-16c1-4bd9-b2ca-27ca82640a6f)
 
-
 ### Skill Icons (requires HH++ BDSM)
 Adds icons for the active skill to the team column. Optionally colors the player names instead like OCD does.
 
 ![Skill_Icons](https://github.com/user-attachments/assets/e1b10349-4d2f-4b60-81c6-23e21e0afb70)
 
+### Used Teams (requires HH++ BDSM)
+Keeps a list of teams the opponents have used this week.
+
+![Used_teams](https://github.com/user-attachments/assets/8cab496d-5dce-4631-bcb2-94074cb69d89)
 
 ## Install
 
