@@ -115,7 +115,17 @@
 
         if (config.githubStorage.enabled) {
             try {
-                oldOpponentData = await readFromGithub();
+                let githubData = await readFromGithub();
+                oldOpponentData['sha'] = githubData.sha;
+                // merge GitHub data into the data from local storage to not lose data if sync was previously off or
+                // temporarily unavailable
+                if (!isEqual(githubData.data, oldOpponentData.data)) {
+                    for (const [id, scores] of Object.entries(githubData.data)) {
+                        if (!oldOpponentData.data[id] || oldOpponentData.data[id].lastChangeTime < scores.lastChangeTime) {
+                            oldOpponentData.data[id] = scores;
+                        }
+                    }
+                }
             } catch (e) {
                 if (firstRun && e.status === 404) {
                     info(`${GITHUB_CONFIG.path} doesn't exist yet`)
