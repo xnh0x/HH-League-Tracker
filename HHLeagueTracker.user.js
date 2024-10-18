@@ -106,21 +106,18 @@
     await leagueTracker(true);
 
     async function leagueTracker(firstRun) {
-        // load local data in case the read from GitHub fails
-        let oldOpponentData = {
-            data: JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.data))
-                || JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) // XXX remove in 1.5
-                || {},
-        };
+        let localStorageData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.data))
+            || JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) // XXX remove in 1.5
+            || {};
 
+        let oldOpponentData = { data: {} };
         if (config.githubStorage.enabled) {
             try {
-                let githubData = await readFromGithub();
-                oldOpponentData['sha'] = githubData.sha;
-                // merge GitHub data into the data from local storage to not lose data if sync was previously off or
+                oldOpponentData = await readFromGithub();
+                // merge local storage data into the data from GitHub to not lose data if sync was previously off or
                 // temporarily unavailable
-                if (!isEqual(githubData.data, oldOpponentData.data)) {
-                    for (const [id, scores] of Object.entries(githubData.data)) {
+                if (!isEqual(localStorageData, oldOpponentData.data)) {
+                    for (const [id, scores] of Object.entries(localStorageData)) {
                         if (!oldOpponentData.data[id] || oldOpponentData.data[id].lastChangeTime < scores.lastChangeTime) {
                             oldOpponentData.data[id] = scores;
                         }
@@ -145,6 +142,9 @@
                 config.githubStorage.enabled = false;
             }
         }
+
+        // use local data in case the read from GitHub failed
+        if (!oldOpponentData.data.length) { oldOpponentData.data = localStorageData; }
 
         let newOpponentData = structuredClone(oldOpponentData.data);
         let newOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
