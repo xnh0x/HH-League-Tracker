@@ -362,17 +362,17 @@
             let team = JSON.parse(t);
             let div = document.createElement('div');
             team.theme.split(',').forEach((element)=>{
-                let elementIcon = getElementIcon(element);
-                elementIcon.style.height = '16px';
-                elementIcon.style.width = '16px';
-                elementIcon.style.marginRight = '-8px';
+                let elementIcon = getElementIcon(element,
+                    { style: 'height: 16px; width: 16px;', });
                 div.appendChild(elementIcon);
             });
-            div.lastElementChild.style.marginRight = '0';
+            if (div.childElementCount === 2) {
+                // overlap dual elements
+                div.firstElementChild.style.marginRight = '-7px';
+            }
             if (team.type && team.type !== 'none') {
-                let skillIcon = getSkillIcon(team.type);
-                skillIcon.style.height = '16px';
-                skillIcon.style.width = '16px';
+                let skillIcon = getSkillIcon(team.type,
+                    { style: 'height: 16px; width: 16px;', });
                 div.appendChild(skillIcon);
             }
             tooltip.appendChild(div);
@@ -439,10 +439,11 @@
         }
     }
 
-    function getElementIcon(element) {
+    function getElementIcon(element, attrs = null) {
         let element_icon = document.createElement('img');
         element_icon.classList.add('team-theme', 'icon');
         element_icon.src = getElementIconSrc(element);
+        if (attrs) Object.entries(attrs).forEach(attr => element_icon.setAttribute(...attr));
         return element_icon;
     }
 
