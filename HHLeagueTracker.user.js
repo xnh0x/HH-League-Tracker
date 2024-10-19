@@ -113,16 +113,7 @@
         let oldOpponentData = { data: {} };
         if (config.githubStorage.enabled) {
             try {
-                oldOpponentData = await readFromGithub();
-                // merge local storage data into the data from GitHub to not lose data if sync was previously off or
-                // temporarily unavailable
-                if (!isEqual(localStorageData, oldOpponentData.data)) {
-                    for (const [id, scores] of Object.entries(localStorageData)) {
-                        if (!oldOpponentData.data[id] || oldOpponentData.data[id].lastChangeTime < scores.lastChangeTime) {
-                            oldOpponentData.data[id] = scores;
-                        }
-                    }
-                }
+                oldOpponentData = await mergeLocalAndGithubData(localStorageData);
             } catch (e) {
                 if (firstRun && e.status === 404) {
                     info(`${GITHUB_CONFIG.path} doesn't exist yet`)
@@ -500,6 +491,24 @@
         // Adjust to Thursday in week 1 and count number of weeks from date to week1.
         const weekNumber = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
         return year + 'W' + (weekNumber < 10 ? '0' : '') + weekNumber;
+    }
+
+    async function mergeLocalAndGithubData(localData) {
+        const github = await readFromGithub();
+        // merge local storage data into the data from GitHub to not lose data if sync was previously off or
+        // temporarily unavailable
+        if (!isEqual(localData, github.data)) {
+            for (const [id, local] of Object.entries(localData)) {
+                if (!github.data[id]
+                    || github.data[id].totalLostPoints < local.totalLostPoints // lost points are more accurate
+                    || (github.data[id].totalLostPoints === local.totalLostPoints
+                        && github.data[id].score < local.score) // lost points are as good and score is newer
+                    ) {
+                    github.data[id] = local;
+                }
+            }
+        }
+        return github;
     }
 
     async function readFromGithub() {
