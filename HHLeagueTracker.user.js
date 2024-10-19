@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.4.3
+// @version      1.4.4
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -52,7 +52,7 @@
 
     // GitHub API
     const { Octokit } = await import('https://esm.sh/@octokit/rest');
-    let OCTOKIT, GITHUB_CONFIG;
+    let OCTOKIT, GITHUB_PARAMS;
 
     const LOCAL_STORAGE_KEYS = {
         data: 'HHLeagueTrackerData',
@@ -68,21 +68,21 @@
         info('no opponents found');
         return;
     }
-    const OPPONENTS_BY_ID = opponents_list.reduce(function(map,object) { map[object.player.id_fighter] = object; return map; }, {})
+    const OPPONENT_DETAILS_BY_ID = opponents_list.reduce(function(map,object) { map[object.player.id_fighter] = object; return map; }, {})
 
     if (config.githubStorage.enabled) {
         if (!window.LeagueTrackerGitHubConfig) {
             info('GitHubConfig missing, using localStorage')
             config.githubStorage.enabled = false;
         } else {
-            GITHUB_CONFIG = window.LeagueTrackerGitHubConfig;
+            GITHUB_PARAMS = window.LeagueTrackerGitHubConfig;
             const PLATFORM = shared.Hero.infos.hh_universe;
             // week and minimum id of all players uniquely identify a league bracket
             const LEAGUE_ID = opponents_list.reduce((a,b) => a.player.id_fighter < b.player.id_fighter ? a : b).player.id_fighter;
             const WEEK = getWeekName(LEAGUE_END_TS);
-            GITHUB_CONFIG.path = `${PLATFORM}/${WEEK}/${LEAGUE_ID}_scores.json`;
+            GITHUB_PARAMS.path = `${PLATFORM}/${WEEK}/${LEAGUE_ID}_scores.json`;
             OCTOKIT = new Octokit({
-                auth: GITHUB_CONFIG.token,
+                auth: GITHUB_PARAMS.token,
             });
         }
     }
@@ -103,6 +103,7 @@
         }
     }
 
+    GITHUB_PARAMS.needsUpdate = false;
     await leagueTracker(true);
 
     async function leagueTracker(firstRun) {
@@ -110,13 +111,15 @@
             || JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.scores)) // XXX remove in 1.5
             || {};
 
-        let oldOpponentData = { data: {} };
+        let opponentData = {};
         if (config.githubStorage.enabled) {
             try {
-                oldOpponentData = await mergeLocalAndGithubData(localStorageData);
+                const {data, sha} = await mergeLocalAndGithubData(localStorageData);
+                opponentData = data;
+                GITHUB_PARAMS.sha = sha;
             } catch (e) {
                 if (firstRun && e.status === 404) {
-                    info(`${GITHUB_CONFIG.path} doesn't exist yet`)
+                    info(`${GITHUB_PARAMS.path} doesn't exist yet`)
                     try {
                         await commitNewFile();
                     } catch (f) {
@@ -135,25 +138,30 @@
         }
 
         // use local data in case the read from GitHub failed
-        if (!Object.keys(oldOpponentData.data).length) { oldOpponentData.data = localStorageData; }
+        if (!Object.keys(opponentData).length) { opponentData = localStorageData; }
 
-        let newOpponentData = structuredClone(oldOpponentData.data);
-        let newOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
+        let opponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
         function updateTable() {
             document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
                 opponentRow => {
                     const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                    newOpponentData[id] = updateScore(opponentRow, id, newOpponentData[id] || {});
-                    newOpponentStats[id] = updateStats(opponentRow, id, newOpponentStats[id] || {});
+                    updateScore(opponentRow, id, OPPONENT_DETAILS_BY_ID[id].player_league_points, opponentData);
+
+                    updateStats(opponentRow, id, opponentStats);
+
                     if (config.activeSkill.enabled) {
                         markActiveSkill(opponentRow, id);
                     }
+
                     // no need to collect your own teams
-                    if (config.usedTeams.enabled && id !== shared.Hero.infos.id) {
-                        newOpponentData[id] = updateUsedTeams(opponentRow, id, newOpponentData[id] || {});
+                    if (config.usedTeams.enabled ) {
+                        updateUsedTeams(opponentRow, id, opponentData);
                     }
+
+                    // add nickname to make browsing the json a little more convenient
+                    opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
                 }
             )
         }
@@ -162,13 +170,16 @@
         // redo changes after sorting the table
         $(document).on('league:table-sorted', () => { updateTable(); })
 
-        localStorage.setItem(LOCAL_STORAGE_KEYS.scores, JSON.stringify(newOpponentData));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
         if (config.githubStorage.enabled) {
-            // write score data to GitHub
-            await commitUpdate(oldOpponentData.data, oldOpponentData.sha, newOpponentData);
+            if (GITHUB_PARAMS.needsUpdate) {
+                await commitUpdate(opponentData);
+            } else {
+                info('nothing changed, no need to update');
+            }
         }
         // stat changes don't really need to be shared between devices so local storage is sufficient
-        localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(newOpponentStats));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
     }
 
     function info() {
@@ -197,11 +208,8 @@
         document.head.appendChild(sheet);
     }
 
-    function updateScore(opponentRow, id, oldData)
-    {
-        const opponent = OPPONENTS_BY_ID[id];
-        const nickname = encodeURI(opponent.nickname);
-        const score = opponent.player_league_points;
+    function updateScore(opponentRow, id, score, opponentData) {
+        const oldData = opponentData[id]
 
         const oldScore = oldData.score || 0;
         const oldLostPoints = oldData.totalLostPoints || 0;
@@ -235,9 +243,8 @@
         }
 
         if (gainedScore > 0) {
-            lastDiff = gainedScore;
-            lastLostPoints = newLostPoints;
-            lastChangeTime = Date.now();
+            GITHUB_PARAMS.needsUpdate = true;
+            opponentData[id] = {...opponentData[id], score, totalLostPoints, lastDiff: gainedScore, lastLostPoints: newLostPoints, lastChangeTime: Date.now()}
             opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = "#16ffc4";
             opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${lastDiff}<br>${-lastLostPoints}`;
             opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
@@ -255,25 +262,23 @@
                     `<br>Last Lost Points: ${lastLostPoints}`);
             }
         }
-        return {...oldData, nickname, score, totalLostPoints, lastDiff, lastLostPoints, lastChangeTime};
     }
 
-    function updateStats(opponentRow, id, oldData)
-    {
+    function updateStats(opponentRow, id, opponentStats) {
+        if (!opponentStats[id]) opponentStats[id] = {};
+        const oldStats = opponentStats[id];
         const STAT_ELEMENT_MAP = {
             'damage': {'div':'#player_attack_stat', 'span':'#stats-damage'},
             'remaining_ego': {'div':'#player_ego_stat', 'span':'#stats-ego'},
             'defense': {'div':'#player_defence_stat', 'span':'#stats-defense'},
             'chance': {'div':'#player_harmony_stat', 'span':'#stats-chance'},
         };
-        const opponent = OPPONENTS_BY_ID[id];
 
-        let newStats = {};
         for (const stat in STAT_ELEMENT_MAP) {
-            const value = opponent.player[stat];
-            const oldValue = oldData[stat]?.value || 0;
-            let lastDiff = oldData[stat]?.lastDiff || 0;
-            let lastChangeTime = oldData[stat]?.lastChangeTime || 0;
+            const value = OPPONENT_DETAILS_BY_ID[id].player[stat];
+            const oldValue = oldStats[stat]?.value || 0;
+            let lastDiff = oldStats[stat]?.lastDiff || 0;
+            let lastChangeTime = oldStats[stat]?.lastChangeTime || 0;
 
             const statDiff = value - oldValue;
             const percentage = value > 0 ? ((100 * statDiff) / value).toFixed(1) : 0;
@@ -301,13 +306,12 @@
                     `Last Stat Diff: ${NUMBER_FORMATTER(lastDiff)} (${PERCENT_FORMATTER(lastPercentage)}%)` +
                     `<br>${formatTime(timeDiff)} ago`);
             }
-            newStats[stat] = {value, lastDiff, lastChangeTime};
+            opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
         }
-        return {...oldData, ...newStats};
     }
 
     function markActiveSkill(opponentRow, id) {
-        const center = OPPONENTS_BY_ID[id].player.team.girls[0];
+        const center = OPPONENT_DETAILS_BY_ID[id].player.team.girls[0];
 
         if (center.skill_tiers_info['5']?.skill_points_used) {
             const {type, id, color} = getSkillByElement(center.girl.element, config.activeSkill.ocd);
@@ -338,14 +342,20 @@
         team_icons.appendChild(getSkillIcon(type, {tooltip}));
     }
 
-    function updateUsedTeams(opponentRow, id, oldData) {
-        let oldTeamsSet = oldData.teams?.length ? new Set(oldData.teams) : new Set();
-        const opponentTeam = OPPONENTS_BY_ID[id].player.team;
+    function updateUsedTeams(opponentRow, id, opponentData) {
+        let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
+        const opponentTeam = OPPONENT_DETAILS_BY_ID[id].player.team;
         let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
             ? getSkillByElement(opponentTeam.girls[0].girl.element).type
             : null;
-        oldTeamsSet.add(JSON.stringify({ theme: opponentTeam.theme, type: type }));
-        const teams= Array.from(oldTeamsSet).sort();
+
+        const currentTeam = JSON.stringify({ theme: opponentTeam.theme, type: type });
+        if (!teamsSet.has(currentTeam)) {
+            teamsSet.add(currentTeam);
+            GITHUB_PARAMS.needsUpdate = true;
+        }
+        const teams= Array.from(teamsSet).sort();
+        opponentData[id].teams = teams;
 
         let tooltip = document.createElement('div');
         tooltip.innerText = 'Used Teams:';
@@ -368,13 +378,10 @@
             }
             tooltip.appendChild(div);
         })
-
         opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML)
-        return {...oldData, teams}
     }
 
-    function getScoreColor(lostPoints)
-    {
+    function getScoreColor(lostPoints) {
         if (lostPoints <= 25) {
             return "#ec0039"; // mythic
         } else if (lostPoints <= 50) {
@@ -463,8 +470,7 @@
         }
     }
 
-    function formatTime(millis)
-    {
+    function formatTime(millis) {
         let seconds = Math.floor(millis / 1000);
         let minutes = Math.floor(seconds / 60);
         let hours = Math.floor(minutes / 60);
@@ -504,6 +510,7 @@
                     || (github.data[id].totalLostPoints === local.totalLostPoints
                         && github.data[id].score < local.score) // lost points are as good and score is newer
                     ) {
+                    GITHUB_PARAMS.needsUpdate = true;
                     github.data[id] = local;
                 }
             }
@@ -512,11 +519,11 @@
     }
 
     async function readFromGithub() {
-        info(`reading ${GITHUB_CONFIG.path}`);
+        info(`reading ${GITHUB_PARAMS.path}`);
         const params = {
-            owner: GITHUB_CONFIG.owner,
-            repo: GITHUB_CONFIG.repo,
-            path: GITHUB_CONFIG.path,
+            owner: GITHUB_PARAMS.owner,
+            repo: GITHUB_PARAMS.repo,
+            path: GITHUB_PARAMS.path,
             headers: {
                 'If-None-Match': '' // workaround for avoiding cached data
             },
@@ -529,32 +536,28 @@
     }
 
     function commitMessage(action) {
-        return `${(new Date()).toISOString()} [${shared.Hero.infos.name}] ${action} ${GITHUB_CONFIG.path}`;
+        return `${(new Date()).toISOString()} [${shared.Hero.infos.name}] ${action} ${GITHUB_PARAMS.path}`;
     }
 
     async function commitNewFile() {
-        info(`creating ${GITHUB_CONFIG.path}`);
+        info(`creating ${GITHUB_PARAMS.path}`);
         const message = commitMessage('create');
         const content = btoa('{}'); // needs to be encoded in base64
         await writeToGithub(content, message);
     }
 
-    async function commitUpdate(oldData, sha, data) {
-        if (isEqual(oldData, data)) {
-            info('nothing changed, no need to update');
-            return;
-        }
-        info(`updating ${GITHUB_CONFIG.path}`);
+    async function commitUpdate(data) {
+        info(`updating ${GITHUB_PARAMS.path}`);
         const message = commitMessage('update');
         const content = btoa(JSON.stringify(data, null, 2)); // needs to be encoded in base64
-        await writeToGithub(content, message, sha);
+        await writeToGithub(content, message, GITHUB_PARAMS.sha);
     }
 
     async function writeToGithub(content, message, sha = null) {
         let params = {
-            owner: GITHUB_CONFIG.owner,
-            repo: GITHUB_CONFIG.repo,
-            path: GITHUB_CONFIG.path,
+            owner: GITHUB_PARAMS.owner,
+            repo: GITHUB_PARAMS.repo,
+            path: GITHUB_PARAMS.path,
             message: message,
             content: content,
         }
@@ -571,8 +574,7 @@
         })();
     }
 
-    async function loadConfig()
-    {
+    async function loadConfig() {
         // defaults
         let config = {
             githubStorage: {
