@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker Dev
-// @version      1.4.1
+// @version      1.4.3
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -147,7 +147,7 @@
         }
 
         // use local data in case the read from GitHub failed
-        if (!oldOpponentData.data.length) { oldOpponentData.data = localStorageData; }
+        if (!Object.keys(oldOpponentData.data).length) { oldOpponentData.data = localStorageData; }
 
         let newOpponentData = structuredClone(oldOpponentData.data);
         let newOpponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
