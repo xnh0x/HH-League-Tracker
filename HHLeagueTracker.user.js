@@ -195,6 +195,10 @@
                     if (config.average.enabled) {
                         addAverage(opponentRow, id, opponentData)
                     }
+
+                    if (config.hideLevel.move) {
+                        addLevelToAvatar(opponentRow, id)
+                    }
                 }
             )
         }
@@ -239,6 +243,10 @@
             '.result { box-shadow: none !important; }',
             // shadow to improve readability in some games
             '.data-column:not(.head-column) { text-shadow: 1px 1px 0px #000 !important; }',
+            // outline for level on avatar
+            config.hideLevel.move ? '.data-column[column="nickname"] .square-avatar-wrapper { text-shadow:  1px 1px 0px #000 , -1px 1px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000; }' : '',
+            // remove level column
+            config.hideLevel.enabled ? '.data-row .data-column[column="level"], .data-row .head-column[column="level"] { display: none; }' : '',
             // reduce line height to fit two lines of text in the row
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
         ].join(' ');
@@ -438,6 +446,15 @@
 
             pointsColumn.after(avgColumn);
         }
+    }
+
+    function addLevelToAvatar(opponentRow, id) {
+        let avatar = opponentRow.querySelector('.data-column[column="nickname"] .square-avatar-wrapper');
+        avatar.style.position = 'relative';
+        let lvl = document.createElement('div');
+        lvl.innerHTML = OPPONENT_DETAILS_BY_ID[id].level;
+        lvl.setAttribute('style', ` width: 100%; position: absolute; bottom: -0.2rem; text-align: center; font-size: 0.66rem`);
+        avatar.appendChild(lvl);
     }
 
     function getScoreColor(lostPoints) {
@@ -674,6 +691,10 @@
                 enabled: false,
                 color: false,
             },
+            hideLevel: {
+                enabled: false,
+                move: false,
+            },
         };
 
         // changing config requires HH++
@@ -789,6 +810,27 @@
             },
         });
         config.average.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'hideLevel',
+                label: 'Remove level column',
+                default: false,
+                subSettings: [
+                    { key: 'move', default: false,
+                        label: 'Show level on avatar',
+                    },
+                ],
+            },
+            run(subSettings) {
+                config.hideLevel = {
+                    enabled: true,
+                    move: subSettings.move,
+                };
+            },
+        });
+        config.hideLevel.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
