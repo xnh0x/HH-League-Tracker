@@ -156,7 +156,7 @@
                     }
 
                     // no need to collect your own teams
-                    if (config.usedTeams.enabled ) {
+                    if (config.usedTeams.enabled && id !== shared.Hero.infos.id) {
                         updateUsedTeams(opponentRow, id, opponentData);
                     }
 
