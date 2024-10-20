@@ -2,7 +2,17 @@
 
 ![HH_League_Tracker](https://github.com/user-attachments/assets/84114d70-9528-4036-a0d0-057d3a7ea4de)
 
+## Install
+
+Install from here https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/master/HHLeagueTracker.user.js
+
+On PC you need [TamperMonkey](https://www.tampermonkey.net) or a similar browser extension.
+
+Tested on iOS Safari with the [Stay](https://apps.apple.com/us/app/stay-for-safari/id1591620171) userscript manager.
+
 Requires [HH++ BDSM](https://github.com/zoop0kemon/hh-plus-plus) for the configuration.
+
+## Features
 
 ### Score Tracking
 Keeps counting everyones lost points and colors them based on the total amount lost. Optionally uses GitHub to sync data between devices.
@@ -23,14 +33,6 @@ Adds icons for the active skill to the team column. Optionally colors the player
 Keeps a list of teams the opponents have used this week.
 
 ![Used_teams](https://github.com/user-attachments/assets/8cab496d-5dce-4631-bcb2-94074cb69d89)
-
-## Install
-
-Install from here https://github.com/xnh0x/HH-League-Tracker/raw/refs/heads/master/HHLeagueTracker.user.js
-
-On PC you need [TamperMonkey](https://www.tampermonkey.net) or a similar browser extension.
-
-Tested on iOS Safari with the [Stay](https://apps.apple.com/us/app/stay-for-safari/id1591620171) userscript manager.
 
 ## Setup GitHub Sync
 
@@ -65,22 +67,4 @@ Install the second script https://github.com/xnh0x/HH-League-Tracker/raw/refs/he
 
 ### Enable the sync
 
-If you have HH++ you can just go to the "League Tracker" tab and activate the sync option.
-
-If you don't have HH++ you need to edit the default config in the Tracker script near the bottom:
-```
-        // defaults
-        let config = {
-            githubStorage: {
-                enabled: false,      <-- set this to true
-            },
-            scoreColor: {
-                enabled: true,
-                rank: false,
-                name: false,
-                level: false,
-                points: true,
-            },
-        };
-```
-this will however disable automatic updates by Tampermonkey. 
+The sync is on by default. To turn it off you can either simply turn off or remove the GitHub config script mentioned above so the Tracker script can't use GitHub or if you have HH++ you can just go to the "League Tracker" tab in the options menu there and deactivate the sync option.
