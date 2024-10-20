@@ -578,7 +578,7 @@
         // defaults
         let config = {
             githubStorage: {
-                enabled: false,
+                enabled: true,
             },
             scoreColor: {
                 enabled: true,
@@ -613,7 +613,7 @@
             configSchema: {
                 baseKey: 'githubStorage',
                 label: 'Sync data to GitHub (see <a href="https://github.com/xnh0x/HH-League-Tracker" target="_blank">README</a>).',
-                default: false,
+                default: true,
             },
             run() {
                 config.githubStorage = {
