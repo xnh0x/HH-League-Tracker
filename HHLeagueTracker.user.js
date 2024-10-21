@@ -327,8 +327,8 @@
             let lastChangeTime = oldStats[stat]?.lastChangeTime || 0;
 
             const statDiff = value - oldValue;
-            const percentage = value > 0 ? ((100 * statDiff) / value).toFixed(1) : 0;
-            const lastPercentage = oldValue > 0 ? ((100 * lastDiff) / oldValue).toFixed(1) : 0;
+            const percentage = value > 0 ? (100 * statDiff) / value : 0;
+            const lastPercentage = oldValue > 0 ? (100 * lastDiff) / oldValue : 0;
 
             // shadow to make text more readable on some games
             opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.textShadow = "1px 1px 0px #000000";
@@ -351,6 +351,8 @@
                 opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
                     `Last Stat Diff: ${STAT_DIFF_FORMATTER(lastDiff)} (${STAT_PERCENT_FORMATTER(lastPercentage)}%)` +
                     `<br>${formatTime(timeDiff)} ago`);
+            } else {
+                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since league start');
             }
             opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
         }
