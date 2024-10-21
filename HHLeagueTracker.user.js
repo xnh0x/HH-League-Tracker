@@ -335,6 +335,8 @@
                 opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
                     `Last Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)` +
                     `<br>${FORMAT.time(timeDiff)} ago`);
+            } else {
+                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since league start');
             }
             opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
         }
