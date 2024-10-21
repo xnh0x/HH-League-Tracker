@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker Dev
-// @version      1.4.3
+// @version      1.4.4
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -164,10 +164,11 @@
                     let avgColumn = document.createElement('div');
                     avgColumn.classList.add('data-column', 'head-column');
                     avgColumn.setAttribute('column', 'average');
+                    avgColumn.style.textAlign = 'center';
                     let span = document.createElement('span');
                     span.innerHTML = 'Average';
                     avgColumn.appendChild(span);
-                    avgColumn.style.minWidth = '500px !important' // FIXME
+                    avgColumn.style.minWidth = '1.8rem';
                     pointsColumn.after(avgColumn);
                 }
             }
@@ -439,8 +440,8 @@
             let avgColumn = document.createElement('div');
             avgColumn.classList = pointsColumn.classList;
             avgColumn.setAttribute('column', 'average');
-            // avgColumn.style.fontSize = "11px";
-            avgColumn.style.minWidth = '500px !important' // FIXME
+            avgColumn.style.minWidth = '1.8rem';
+            avgColumn.style.textAlign = 'center';
             if (config.average.color) {
                 avgColumn.style.color = getAverageColor(average);
             }
