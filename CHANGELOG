@@ -1,2 +1,7 @@
-1.3 : add active skill display, improve league rollover
+1.5 : improve merging of github and local data
+      new option average column
+      new option hide level column
+1.4 : new option team tracking
+1.3 : new option active skill display
+      improve league rollover
 1.2 : fix config not loading on mobile
