@@ -62,6 +62,7 @@
         leagueEnd: 'HHLeagueTrackerLeagueEnd'
     }
 
+    const PAGE_LOAD_TS = window.server_now_ts * 1000
     const LEAGUE_END_TS = (window.server_now_ts + window.season_end_at) * 1000;
 
     if (!opponents_list.length) {
@@ -243,9 +244,9 @@
 
         const oldScore = oldData.score || 0;
         const oldLostPoints = oldData.totalLostPoints || 0;
-        let lastDiff = oldData.lastDiff || 0;
-        let lastLostPoints = oldData.lastLostPoints || 0;
-        let lastChangeTime = oldData.lastChangeTime || 0;
+        const lastDiff = oldData.lastDiff || 0;
+        const lastLostPoints = oldData.lastLostPoints || 0;
+        const lastChangeTime = oldData.lastChangeTime || 0;
 
         const gainedScore = score - oldScore;
         const newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
@@ -272,13 +273,15 @@
             }
         }
 
-        if (gainedScore > 0) {
-            GITHUB_PARAMS.needsUpdate = true;
-            opponentData[id] = {...opponentData[id], score, totalLostPoints, lastDiff: gainedScore, lastLostPoints: newLostPoints, lastChangeTime: Date.now()}
+        if (gainedScore > 0 || lastChangeTime === PAGE_LOAD_TS) {
+            if (gainedScore > 0) {
+                GITHUB_PARAMS.needsUpdate = true;
+                opponentData[id] = {...opponentData[id], score, totalLostPoints, lastDiff: gainedScore, lastLostPoints: newLostPoints, lastChangeTime: PAGE_LOAD_TS}
+            }
             opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = "#16ffc4";
-            opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${gainedScore}<br>${-newLostPoints}`;
+            opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
             opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                `Total Score: ${score}<br>Total Lost Points: -${totalLostPoints}`);
+                `Total Score: ${opponentData[id].score}<br>Total Lost Points: -${opponentData[id].totalLostPoints}`);
         } else if (lastDiff > 0) {
             if (lastChangeTime > 0) {
                 const timeDiff = FORMAT.time(Date.now() - lastChangeTime);
