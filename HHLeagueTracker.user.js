@@ -453,6 +453,8 @@
 
     function addLevelToAvatar(opponentRow, id) {
         let avatar = opponentRow.querySelector('.data-column[column="nickname"] .square-avatar-wrapper');
+        // some scripts remove the avatar
+        if (!avatar) { config.hideLevel.move = false; return; }
         avatar.style.position = 'relative';
         let lvl = document.createElement('div');
         lvl.innerHTML = OPPONENT_DETAILS_BY_ID[id].level;
