@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.4.4
+// @version      1.4.5
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -52,7 +52,8 @@
 
     // GitHub API
     const { Octokit } = await import('https://esm.sh/@octokit/rest');
-    let OCTOKIT, GITHUB_PARAMS;
+    let OCTOKIT;
+    let GITHUB_PARAMS = {};
 
     const LOCAL_STORAGE_KEYS = {
         data: 'HHLeagueTrackerData',
