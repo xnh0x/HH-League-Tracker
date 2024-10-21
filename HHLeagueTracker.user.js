@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.4.6
+// @version      1.4.7
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -210,7 +210,8 @@
     }
 
     function updateScore(opponentRow, id, score, opponentData) {
-        const oldData = opponentData[id]
+        if (!opponentData[id]) opponentData[id] = {};
+        const oldData = opponentData[id];
 
         const oldScore = oldData.score || 0;
         const oldLostPoints = oldData.totalLostPoints || 0;
