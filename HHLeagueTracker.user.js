@@ -44,8 +44,18 @@
 
     addCSS();
 
-    const NUMBER_FORMATTER = Intl.NumberFormat('en', { notation: 'compact', signDisplay: "exceptZero" }).format;
-    const PERCENT_FORMATTER = Intl.NumberFormat('en', { minimumFractionDigits : 1, maximumFractionDigits : 1, signDisplay: "exceptZero" }).format;
+    const STAT_DIFF_FORMATTER = Intl.NumberFormat('en', {
+        notation: 'compact',
+        signDisplay: "exceptZero",
+    }).format;
+    const STAT_PERCENT_FORMATTER = Intl.NumberFormat('en', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+        signDisplay: "exceptZero",
+    }).format;
+    const AVERAGE_FORMATTER = Intl.NumberFormat('en', {
+        maximumFractionDigits: 2.
+    }).format;
 
     // for object comparison
     const isEqual = (await import('https://esm.sh/lodash/isEqual')).default;
@@ -144,6 +154,23 @@
         let opponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
         function updateTable() {
+            // TODO restructure
+            if (config.average.enabled) {
+                const tableHeader = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
+                if (!tableHeader.querySelector('.data-column[column="average"]')) {
+                    const pointsColumn = tableHeader.querySelector('.data-column[column="player_league_points"]');
+                    let avgColumn = document.createElement('div');
+                    avgColumn.classList.add('data-column', 'head-column');
+                    avgColumn.setAttribute('column', 'average');
+                    avgColumn.style.textAlign = 'center';
+                    let span = document.createElement('span');
+                    span.innerHTML = 'Average';
+                    avgColumn.appendChild(span);
+                    avgColumn.style.minWidth = '1.8rem';
+                    pointsColumn.after(avgColumn);
+                }
+            }
+
             document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
                 opponentRow => {
                     const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
@@ -163,6 +190,10 @@
 
                     // add nickname to make browsing the json a little more convenient
                     opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
+
+                    if (config.average.enabled) {
+                        addAverage(opponentRow, id, opponentData)
+                    }
                 }
             )
         }
@@ -283,8 +314,8 @@
             let lastChangeTime = oldStats[stat]?.lastChangeTime || 0;
 
             const statDiff = value - oldValue;
-            const percentage = value > 0 ? ((100 * statDiff) / value).toFixed(1) : 0;
-            const lastPercentage = oldValue > 0 ? ((100 * lastDiff) / oldValue).toFixed(1) : 0;
+            const percentage = value > 0 ? (100 * statDiff) / value : 0;
+            const lastPercentage = oldValue > 0 ? (100 * lastDiff) / oldValue : 0;
 
             // shadow to make text more readable on some games
             opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.textShadow = "1px 1px 0px #000000";
@@ -295,7 +326,7 @@
                 lastDiff = statDiff;
                 lastChangeTime = (oldValue > 0) ? Date.now() : 0;
                 opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                    `Stat Diff: ${NUMBER_FORMATTER(lastDiff)} (${PERCENT_FORMATTER(percentage)}%)`);
+                    `Stat Diff: ${STAT_DIFF_FORMATTER(lastDiff)} (${STAT_PERCENT_FORMATTER(percentage)}%)`);
             } else if (lastChangeTime > 0) {
                 const timeDiff = Date.now() - lastChangeTime;
                 const statColor = (timeDiff < 60 * 1000) ?
@@ -305,7 +336,7 @@
                     opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
                 }
                 opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                    `Last Stat Diff: ${NUMBER_FORMATTER(lastDiff)} (${PERCENT_FORMATTER(lastPercentage)}%)` +
+                    `Last Stat Diff: ${STAT_DIFF_FORMATTER(lastDiff)} (${STAT_PERCENT_FORMATTER(lastPercentage)}%)` +
                     `<br>${formatTime(timeDiff)} ago`);
             }
             opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
@@ -383,6 +414,27 @@
         opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML)
     }
 
+    function addAverage(opponentRow, id, opponentData) {
+        // must run after updateScores since it depends on score and totalLostPoints
+        if (!opponentRow.querySelector('.data-column[column="average"]')) {
+            const pointsColumn = opponentRow.querySelector('.data-column[column="player_league_points"]');
+            const {score, totalLostPoints} = opponentData[id];
+            const average = score ? 25 * score / (score + totalLostPoints) : 0;
+
+            let avgColumn = document.createElement('div');
+            avgColumn.classList = pointsColumn.classList;
+            avgColumn.setAttribute('column', 'average');
+            avgColumn.style.minWidth = '1.8rem';
+            avgColumn.style.textAlign = 'center';
+            if (config.average.color) {
+                avgColumn.style.color = getAverageColor(average);
+            }
+            avgColumn.innerHTML = AVERAGE_FORMATTER(average);
+
+            pointsColumn.after(avgColumn);
+        }
+    }
+
     function getScoreColor(lostPoints) {
         if (lostPoints <= 25) {
             return "#ec0039"; // mythic
@@ -391,6 +443,20 @@
         } else if (lostPoints <= 100) {
             return "#ffb244"; // epic
         } else if (lostPoints <= 200) {
+            return "#32bc4f"; // rare
+        } else {
+            return "#676767"; // grey
+        }
+    }
+
+    function getAverageColor(average) {
+        if (average >= 24.9) {
+            return "#ec0039"; // mythic
+        } else if (average >= 24.7) {
+            return "#d561e6"; // legendary
+        } else if (average >= 24.4) {
+            return "#ffb244"; // epic
+        } else if (average >= 24) {
             return "#32bc4f"; // rare
         } else {
             return "#676767"; // grey
@@ -511,7 +577,7 @@
                     || github.data[id].totalLostPoints < local.totalLostPoints // lost points are more accurate
                     || (github.data[id].totalLostPoints === local.totalLostPoints
                         && github.data[id].score < local.score) // lost points are as good and score is newer
-                    ) {
+                ) {
                     GITHUB_PARAMS.needsUpdate = true;
                     github.data[id] = local;
                 }
@@ -597,6 +663,10 @@
             usedTeams: {
                 enabled: false,
             },
+            average: {
+                enabled: false,
+                color: false,
+            },
         };
 
         // changing config requires HH++
@@ -630,10 +700,10 @@
             configSchema: {
                 baseKey: 'scoreColor',
                 label: `Color players based on the amount of lost points<br>`
-                    + ` <span style="color: ${getScoreColor(0)}">&le;25</span>`
-                    + ` <span style="color: ${getScoreColor(26)}">&le;50</span>`
-                    + ` <span style="color: ${getScoreColor(51)}">&le;100</span>`
-                    + ` <span style="color: ${getScoreColor(101)}">&le;200</span>`,
+                    + ` <span style="color: ${getScoreColor(25)}">&le;25</span>`
+                    + ` <span style="color: ${getScoreColor(50)}">&le;50</span>`
+                    + ` <span style="color: ${getScoreColor(100)}">&le;100</span>`
+                    + ` <span style="color: ${getScoreColor(200)}">&le;200</span>`,
                 default: true,
                 subSettings: [
                     { key: 'rank', default: false, label: 'Rank' },
@@ -687,6 +757,31 @@
             },
         });
         config.activeSkill.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'average',
+                label: 'Add column with current average',
+                default: false,
+                subSettings: [
+                    { key: 'color', default: false,
+                        label: `Use colors<br>`
+                            + ` <span style="color: ${getAverageColor(24.9)}">&ge;24.9</span>`
+                            + ` <span style="color: ${getAverageColor(24.7)}">&ge;24.7</span>`
+                            + ` <span style="color: ${getAverageColor(24.4)}">&ge;24.4</span>`
+                            + ` <span style="color: ${getAverageColor(24)}">&ge;24</span>`,
+                    },
+                ],
+            },
+            run(subSettings) {
+                config.average = {
+                    enabled: true,
+                    color: subSettings.color,
+                };
+            },
+        });
+        config.average.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
