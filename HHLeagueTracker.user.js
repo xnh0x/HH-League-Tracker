@@ -62,7 +62,8 @@
 
     // GitHub API
     const { Octokit } = await import('https://esm.sh/@octokit/rest');
-    let OCTOKIT, GITHUB_PARAMS;
+    let OCTOKIT;
+    let GITHUB_PARAMS = {};
 
     const LOCAL_STORAGE_KEYS = {
         data: 'HHLeagueTrackerData',
