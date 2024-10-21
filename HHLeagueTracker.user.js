@@ -44,18 +44,7 @@
 
     addCSS();
 
-    const STAT_DIFF_FORMATTER = Intl.NumberFormat('en', {
-        notation: 'compact',
-        signDisplay: "exceptZero",
-    }).format;
-    const STAT_PERCENT_FORMATTER = Intl.NumberFormat('en', {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-        signDisplay: "exceptZero",
-    }).format;
-    const AVERAGE_FORMATTER = Intl.NumberFormat('en', {
-        maximumFractionDigits: 2.
-    }).format;
+    const FORMAT = getFormatters();
 
     // for object comparison
     const isEqual = (await import('https://esm.sh/lodash/isEqual')).default;
@@ -292,7 +281,7 @@
                 `Total Score: ${score}<br>Total Lost Points: -${totalLostPoints}`);
         } else if (lastDiff > 0) {
             if (lastChangeTime > 0) {
-                const timeDiff = formatTime(Date.now() - lastChangeTime);
+                const timeDiff = FORMAT.time(Date.now() - lastChangeTime);
                 opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
                     `Last Score Diff: ${lastDiff}` +
                     `<br>Last Lost Points: ${lastLostPoints}` +
@@ -334,7 +323,7 @@
                 lastDiff = statDiff;
                 lastChangeTime = (oldValue > 0) ? Date.now() : 0;
                 opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                    `Stat Diff: ${STAT_DIFF_FORMATTER(lastDiff)} (${STAT_PERCENT_FORMATTER(percentage)}%)`);
+                    `Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(percentage)}%)`);
             } else if (lastChangeTime > 0) {
                 const timeDiff = Date.now() - lastChangeTime;
                 const statColor = (timeDiff < 60 * 1000) ?
@@ -344,8 +333,8 @@
                     opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
                 }
                 opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                    `Last Stat Diff: ${STAT_DIFF_FORMATTER(lastDiff)} (${STAT_PERCENT_FORMATTER(lastPercentage)}%)` +
-                    `<br>${formatTime(timeDiff)} ago`);
+                    `Last Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)` +
+                    `<br>${FORMAT.time(timeDiff)} ago`);
             }
             opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
         }
@@ -437,7 +426,7 @@
             if (config.average.color) {
                 avgColumn.style.color = getAverageColor(average);
             }
-            avgColumn.innerHTML = AVERAGE_FORMATTER(average);
+            avgColumn.innerHTML = FORMAT.average(average);
 
             pointsColumn.after(avgColumn);
         }
@@ -557,18 +546,33 @@
         }
     }
 
-    function formatTime(millis) {
-        let seconds = Math.floor(millis / 1000);
-        let minutes = Math.floor(seconds / 60);
-        let hours = Math.floor(minutes / 60);
-        let days = Math.floor(hours / 24);
-        seconds %= 60;
-        minutes %= 60;
-        hours %= 24;
-        return (days > 0 ? days + 'd ' : '') +
-            (days > 0 || hours > 0 ? hours + 'h ' : '') +
-            (days > 0 || hours > 0 || minutes > 0 ? minutes + 'm ' : '') +
-            seconds + 's';
+    function getFormatters() {
+        function formatTime(millis) {
+            let seconds = Math.floor(millis / 1000);
+            let minutes = Math.floor(seconds / 60);
+            let hours = Math.floor(minutes / 60);
+            let days = Math.floor(hours / 24);
+            seconds %= 60;
+            minutes %= 60;
+            hours %= 24;
+            return (days > 0 ? days + 'd ' : '') +
+                (days > 0 || hours > 0 ? hours + 'h ' : '') +
+                (days > 0 || hours > 0 || minutes > 0 ? minutes + 'm ' : '') +
+                seconds + 's';
+        }
+
+        return {
+            statDiff: Intl.NumberFormat('en', {
+                notation: 'compact',
+                signDisplay: "exceptZero",}).format,
+            statPercent: Intl.NumberFormat('en', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+                signDisplay: "exceptZero",}).format,
+            average: Intl.NumberFormat('en', {
+                maximumFractionDigits: 2}).format,
+            time: formatTime,
+        };
     }
 
     function getWeekName(epochMillis) {
