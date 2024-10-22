@@ -34,9 +34,9 @@
 
     info('version:', GM_info.script.version)
 
-    const config = await loadConfig();
+    const CONFIG = await loadConfig();
 
-    info('config:', config);
+    info('config:', CONFIG);
 
     if(window.location.pathname !== '/leagues.html') {
         return;
@@ -69,10 +69,10 @@
     }
     const OPPONENT_DETAILS_BY_ID = opponents_list.reduce(function(map,object) { map[object.player.id_fighter] = object; return map; }, {})
 
-    if (config.githubStorage.enabled) {
+    if (CONFIG.githubStorage.enabled) {
         if (!window.LeagueTrackerGitHubConfig) {
             info('GitHubConfig missing, using localStorage')
-            config.githubStorage.enabled = false;
+            CONFIG.githubStorage.enabled = false;
         } else {
             GITHUB_PARAMS = window.LeagueTrackerGitHubConfig;
             const PLATFORM = shared.Hero.infos.hh_universe;
@@ -93,7 +93,7 @@
         info('new league has started, deleting old data from local storage')
         localStorage.removeItem(LOCAL_STORAGE_KEYS.data);
         localStorage.removeItem(LOCAL_STORAGE_KEYS.stats);
-        if (config.githubStorage.enabled) {
+        if (CONFIG.githubStorage.enabled) {
             await commitNewFile();
             // give GitHub a moment to process the new file
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -107,7 +107,7 @@
         let localStorageData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.data)) || {};
 
         let opponentData = {};
-        if (config.githubStorage.enabled) {
+        if (CONFIG.githubStorage.enabled) {
             try {
                 const {data, sha} = await mergeLocalAndGithubData(localStorageData);
                 opponentData = data;
@@ -128,7 +128,7 @@
                 } else {
                     info('couldn\'t read data from github, using localStorage');
                 }
-                config.githubStorage.enabled = false;
+                CONFIG.githubStorage.enabled = false;
             }
         }
 
@@ -150,7 +150,7 @@
         );
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
-        if (config.githubStorage.enabled) {
+        if (CONFIG.githubStorage.enabled) {
             if (GITHUB_PARAMS.needsUpdate) {
                 await commitUpdate(opponentData);
             } else {
@@ -180,9 +180,9 @@
             // shadow to improve readability in some games
             '.data-column:not(.head-column) { text-shadow: 1px 1px 0px #000 !important; }',
             // outline for level on avatar
-            config.hideLevel.move ? '.data-column[column="nickname"] .square-avatar-wrapper { text-shadow:  1px 1px 0px #000 , -1px 1px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000; }' : '',
+            CONFIG.hideLevel.move ? '.data-column[column="nickname"] .square-avatar-wrapper { text-shadow:  1px 1px 0px #000 , -1px 1px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000; }' : '',
             // remove level column
-            config.hideLevel.enabled ? '.data-row .data-column[column="level"], .data-row .head-column[column="level"] { display: none; }' : '',
+            CONFIG.hideLevel.enabled ? '.data-row .data-column[column="level"], .data-row .head-column[column="level"] { display: none; }' : '',
             // reduce line height to fit two lines of text in the row
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
         ].join(' ');
@@ -191,11 +191,11 @@
 
     function updateTable(opponentData) {
 
-        if (config.hideLevel.move) {
+        if (CONFIG.hideLevel.move) {
             addLevelToAvatar();
         }
 
-        if (config.activeSkill.enabled) {
+        if (CONFIG.activeSkill.enabled) {
             markActiveSkill();
         }
 
@@ -203,11 +203,11 @@
 
         updateScore(opponentData);
 
-        if (config.usedTeams.enabled) {
+        if (CONFIG.usedTeams.enabled) {
             updateUsedTeams(opponentData);
         }
 
-        if (config.average.enabled) {
+        if (CONFIG.average.enabled) {
             addAverageColumn();
             updateAverage(opponentData);
         }
@@ -234,20 +234,20 @@
                 // add lost points below score
                 opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-totalLostPoints}`;
 
-                if (config.scoreColor.enabled) {
+                if (CONFIG.scoreColor.enabled) {
                     const scoreColor = getScoreColor(totalLostPoints)
-                    if (config.scoreColor.rank) {
+                    if (CONFIG.scoreColor.rank) {
                         opponentRow.querySelector('.data-column[column="place"]').style.color = scoreColor;
                     }
-                    if (config.scoreColor.name) {
+                    if (CONFIG.scoreColor.name) {
                         // remove clubmate class from League++ so clubmates get colored correctly too
                         opponentRow.querySelector('.data-column[column="nickname"]').classList.remove("clubmate");
                         opponentRow.querySelector('.data-column[column="nickname"]').style.color = scoreColor;
                     }
-                    if (config.scoreColor.level) {
+                    if (CONFIG.scoreColor.level) {
                         opponentRow.querySelector('.data-column[column="level"]').style.color = scoreColor;
                     }
-                    if (config.scoreColor.points) {
+                    if (CONFIG.scoreColor.points) {
                         opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = scoreColor;
                     }
                 }
@@ -352,9 +352,9 @@
                 const center = OPPONENT_DETAILS_BY_ID[id].player.team.girls[0];
 
                 if (center.skill_tiers_info['5']?.skill_points_used) {
-                    const {type, id, color} = getSkillByElement(center.girl.element, config.activeSkill.ocd);
+                    const {type, id, color} = getSkillByElement(center.girl.element, CONFIG.activeSkill.ocd);
 
-                    if (config.activeSkill.noIcon) {
+                    if (CONFIG.activeSkill.noIcon) {
                         applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
                     } else {
                         const tooltip = `${type} ${center.skills[id].skill.display_value_text}`;
@@ -477,7 +477,7 @@
                 const {score, totalLostPoints} = opponentData[id];
                 const average = score ? 25 * score / (score + totalLostPoints) : 0;
 
-                if (config.average.color) {
+                if (CONFIG.average.color) {
                     avgColumn.style.color = getAverageColor(average);
                 }
 
@@ -494,7 +494,7 @@
                 let avatar = opponentRow.querySelector('.data-column[column="nickname"] .square-avatar-wrapper');
                 // some scripts remove the avatar
                 if (!avatar) {
-                    config.hideLevel.move = false;
+                    CONFIG.hideLevel.move = false;
                     return;
                 }
                 avatar.style.position = 'relative';
@@ -610,32 +610,40 @@
     }
 
     function getFormatters() {
-        function formatTime(millis) {
-            let seconds = Math.floor(millis / 1000);
-            let minutes = Math.floor(seconds / 60);
-            let hours = Math.floor(minutes / 60);
-            let days = Math.floor(hours / 24);
-            seconds %= 60;
-            minutes %= 60;
-            hours %= 24;
-            return (days > 0 ? days + 'd ' : '') +
-                (days > 0 || hours > 0 ? hours + 'h ' : '') +
-                (days > 0 || hours > 0 || minutes > 0 ? minutes + 'm ' : '') +
-                seconds + 's';
-        }
+        let formatters = {};
 
-        return {
-            statDiff: Intl.NumberFormat('en', {
+        formatters.statDiff = Intl.NumberFormat('en', {
                 notation: 'compact',
-                signDisplay: "exceptZero",}).format,
-            statPercent: Intl.NumberFormat('en', {
+                signDisplay: "exceptZero"}).format;
+
+        formatters.statPercent = Intl.NumberFormat('en', {
                 minimumFractionDigits: 1,
                 maximumFractionDigits: 1,
-                signDisplay: "exceptZero",}).format,
-            average: Intl.NumberFormat('en', {
-                maximumFractionDigits: 2}).format,
-            time: formatTime,
-        };
+                signDisplay: "exceptZero"}).format;
+
+        formatters.average = Intl.NumberFormat('en', {
+                maximumFractionDigits: 2}).format;
+
+        formatters.time = (millis) => {
+            const days = Math.floor(millis / 1000 / 60 / 60 / 24);
+            let show = days > 0;
+            const d = show ? days + 'd ' : '';
+
+            const hours = Math.floor(millis / 1000 / 60 / 60) % 24;
+            show |= hours > 0;
+            const h = show ? hours + 'h ' : '';
+
+            const minutes = Math.floor(millis / 1000 / 60) % 60;
+            show |= minutes > 0;
+            const m = show ? minutes + 'm ' : '';
+
+            const seconds = Math.floor(millis / 1000) % 60;
+            const s = seconds + 's';
+
+            return d + h + m + s;
+        }
+
+        return formatters;
     }
 
     function getWeekName(epochMillis) {
