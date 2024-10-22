@@ -135,60 +135,19 @@
         // use local data in case the read from GitHub failed
         if (!Object.keys(opponentData).length) { opponentData = localStorageData; }
 
-        let opponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
+        updateTable(opponentData);
 
-        function updateTable() {
-            // TODO restructure
-            if (config.average.enabled) {
-                const tableHeader = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
-                if (!tableHeader.querySelector('.data-column[column="average"]')) {
-                    const pointsColumn = tableHeader.querySelector('.data-column[column="player_league_points"]');
-                    let avgColumn = document.createElement('div');
-                    avgColumn.classList.add('data-column', 'head-column');
-                    avgColumn.setAttribute('column', 'average');
-                    avgColumn.style.textAlign = 'center';
-                    let span = document.createElement('span');
-                    span.innerHTML = 'Average';
-                    avgColumn.appendChild(span);
-                    avgColumn.style.minWidth = '1.8rem';
-                    pointsColumn.after(avgColumn);
-                }
-            }
-
-            document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
-                opponentRow => {
-                    const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
-
-                    updateScore(opponentRow, id, OPPONENT_DETAILS_BY_ID[id].player_league_points, opponentData);
-
-                    updateStats(opponentRow, id, opponentStats);
-
-                    if (config.activeSkill.enabled) {
-                        markActiveSkill(opponentRow, id);
-                    }
-
-                    // no need to collect your own teams
-                    if (config.usedTeams.enabled && id !== shared.Hero.infos.id) {
-                        updateUsedTeams(opponentRow, id, opponentData);
-                    }
-
-                    // add nickname to make browsing the json a little more convenient
-                    opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
-
-                    if (config.average.enabled) {
-                        addAverage(opponentRow, id, opponentData)
-                    }
-
-                    if (config.hideLevel.move) {
-                        addLevelToAvatar(opponentRow, id)
-                    }
-                }
-            )
-        }
-
-        updateTable();
         // redo changes after sorting the table
-        $(document).on('league:table-sorted', () => { updateTable(); })
+        $(document).on('league:table-sorted', () => { updateTable(opponentData); })
+
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                // add nickname to make browsing the json a little more convenient
+                opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
+            }
+        );
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
         if (config.githubStorage.enabled) {
@@ -198,8 +157,6 @@
                 info('nothing changed, no need to update');
             }
         }
-        // stat changes don't really need to be shared between devices so local storage is sufficient
-        localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
     }
 
     function info() {
@@ -232,127 +189,180 @@
         document.head.appendChild(sheet);
     }
 
-    function updateScore(opponentRow, id, score, opponentData) {
-        if (!opponentData[id]) opponentData[id] = {};
-        const oldData = opponentData[id];
+    function updateTable(opponentData) {
 
-        const oldScore = oldData.score || 0;
-        const oldLostPoints = oldData.totalLostPoints || 0;
-        const lastDiff = oldData.lastDiff || 0;
-        const lastLostPoints = oldData.lastLostPoints || 0;
-        const lastChangeTime = oldData.lastChangeTime || 0;
-
-        const gainedScore = score - oldScore;
-        const newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
-        const totalLostPoints = oldLostPoints + newLostPoints;
-
-        // add lost points below score
-        opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-totalLostPoints}`;
-
-        if (config.scoreColor.enabled) {
-            const scoreColor = getScoreColor(totalLostPoints)
-            if (config.scoreColor.rank) {
-                opponentRow.querySelector('.data-column[column="place"]').style.color = scoreColor;
-            }
-            if (config.scoreColor.name) {
-                // remove clubmate class from League++ so clubmates get colored correctly too
-                opponentRow.querySelector('.data-column[column="nickname"]').classList.remove("clubmate");
-                opponentRow.querySelector('.data-column[column="nickname"]').style.color = scoreColor;
-            }
-            if (config.scoreColor.level) {
-                opponentRow.querySelector('.data-column[column="level"]').style.color = scoreColor;
-            }
-            if (config.scoreColor.points) {
-                opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = scoreColor;
-            }
+        if (config.hideLevel.move) {
+            addLevelToAvatar();
         }
 
-        if (gainedScore > 0 || lastChangeTime === PAGE_LOAD_TS) {
-            if (gainedScore > 0) {
-                GITHUB_PARAMS.needsUpdate = true;
-                opponentData[id] = {...opponentData[id], score, totalLostPoints, lastDiff: gainedScore, lastLostPoints: newLostPoints, lastChangeTime: PAGE_LOAD_TS}
-            }
-            opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = "#16ffc4";
-            opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
-            opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                `Total Score: ${opponentData[id].score}<br>Total Lost Points: -${opponentData[id].totalLostPoints}`);
-        } else if (lastDiff > 0) {
-            if (lastChangeTime > 0) {
-                const timeDiff = FORMAT.time(Date.now() - lastChangeTime);
-                opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                    `Last Score Diff: ${lastDiff}` +
-                    `<br>Last Lost Points: ${lastLostPoints}` +
-                    `<br>${timeDiff} ago`);
-            } else {
-                opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                    `Last Score Diff: ${lastDiff}` +
-                    `<br>Last Lost Points: ${lastLostPoints}`);
-            }
+        if (config.activeSkill.enabled) {
+            markActiveSkill();
+        }
+
+        updateStats();
+
+        updateScore(opponentData);
+
+        if (config.usedTeams.enabled) {
+            updateUsedTeams(opponentData);
+        }
+
+        if (config.average.enabled) {
+            addAverageColumn();
+            updateAverage(opponentData);
         }
     }
 
-    function updateStats(opponentRow, id, opponentStats) {
-        if (!opponentStats[id]) opponentStats[id] = {};
-        const oldStats = opponentStats[id];
-        const STAT_ELEMENT_MAP = {
-            'damage': {'div':'#player_attack_stat', 'span':'#stats-damage'},
-            'remaining_ego': {'div':'#player_ego_stat', 'span':'#stats-ego'},
-            'defense': {'div':'#player_defence_stat', 'span':'#stats-defense'},
-            'chance': {'div':'#player_harmony_stat', 'span':'#stats-chance'},
-        };
+    function updateScore(opponentData) {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-        for (const stat in STAT_ELEMENT_MAP) {
-            const value = OPPONENT_DETAILS_BY_ID[id].player[stat];
-            const oldValue = oldStats[stat]?.value || 0;
-            let lastDiff = oldStats[stat]?.lastDiff || 0;
-            let lastChangeTime = oldStats[stat]?.lastChangeTime || 0;
+                if (!opponentData[id]) { opponentData[id] = {}; }
 
-            const statDiff = value - oldValue;
-            const percentage = value > 0 ? (100 * statDiff) / value : 0;
-            const lastPercentage = oldValue > 0 ? (100 * lastDiff) / oldValue : 0;
+                const score = OPPONENT_DETAILS_BY_ID[id].player_league_points;
+                const oldScore = opponentData[id].score || 0;
+                const oldLostPoints = opponentData[id].totalLostPoints || 0;
+                const lastDiff = opponentData[id].lastDiff || 0;
+                const lastLostPoints = opponentData[id].lastLostPoints || 0;
+                const lastChangeTime = opponentData[id].lastChangeTime || 0;
 
-            // shadow to make text more readable on some games
-            opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.textShadow = "1px 1px 0px #000000";
+                const gainedScore = score - oldScore;
+                const newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
+                const totalLostPoints = oldLostPoints + newLostPoints;
 
-            if (statDiff**2 > 1e4) { // ignore small changes
-                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color =
-                    (lastChangeTime > 0) ? ((statDiff > 0) ? "#ec0039" : "#32bc4f") : "#ffffff";
-                lastDiff = statDiff;
-                lastChangeTime = (oldValue > 0) ? Date.now() : 0;
-                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                    `Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(percentage)}%)`);
-            } else if (lastChangeTime > 0) {
-                const timeDiff = Date.now() - lastChangeTime;
-                const statColor = (timeDiff < 60 * 1000) ?
-                    ((lastDiff > 0) ? "#ec0039" : "#32bc4f") :
-                    ((lastDiff > 0) ? "#ff8aa6" : "#a4e7b2"); // lighter highlight color for changes older than 1 minute
-                if (timeDiff < 10 * 60 * 1000) { // only highlight changes in the last 10 minutes
-                    opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
+                // add lost points below score
+                opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-totalLostPoints}`;
+
+                if (config.scoreColor.enabled) {
+                    const scoreColor = getScoreColor(totalLostPoints)
+                    if (config.scoreColor.rank) {
+                        opponentRow.querySelector('.data-column[column="place"]').style.color = scoreColor;
+                    }
+                    if (config.scoreColor.name) {
+                        // remove clubmate class from League++ so clubmates get colored correctly too
+                        opponentRow.querySelector('.data-column[column="nickname"]').classList.remove("clubmate");
+                        opponentRow.querySelector('.data-column[column="nickname"]').style.color = scoreColor;
+                    }
+                    if (config.scoreColor.level) {
+                        opponentRow.querySelector('.data-column[column="level"]').style.color = scoreColor;
+                    }
+                    if (config.scoreColor.points) {
+                        opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = scoreColor;
+                    }
                 }
-                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                    `Last Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)` +
-                    `<br>${FORMAT.time(timeDiff)} ago`);
-            } else {
-                opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since league start');
+
+                if (gainedScore > 0 || lastChangeTime === PAGE_LOAD_TS) {
+                    if (gainedScore > 0) {
+                        GITHUB_PARAMS.needsUpdate = true;
+                        opponentData[id] = {
+                            ...opponentData[id],
+                            score,
+                            totalLostPoints,
+                            lastDiff: gainedScore,
+                            lastLostPoints: newLostPoints,
+                            lastChangeTime: PAGE_LOAD_TS
+                        }
+                    }
+                    opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = "#16ffc4";
+                    opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
+                    opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
+                        `Total Score: ${opponentData[id].score}<br>Total Lost Points: -${opponentData[id].totalLostPoints}`);
+                } else if (lastDiff > 0) {
+                    if (lastChangeTime > 0) {
+                        const timeDiff = FORMAT.time(Date.now() - lastChangeTime);
+                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
+                            `Last Score Diff: ${lastDiff}` +
+                            `<br>Last Lost Points: ${lastLostPoints}` +
+                            `<br>${timeDiff} ago`);
+                    } else {
+                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
+                            `Last Score Diff: ${lastDiff}` +
+                            `<br>Last Lost Points: ${lastLostPoints}`);
+                    }
+                }
             }
-            opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
-        }
+        );
     }
 
-    function markActiveSkill(opponentRow, id) {
-        const center = OPPONENT_DETAILS_BY_ID[id].player.team.girls[0];
+    function updateStats() {
 
-        if (center.skill_tiers_info['5']?.skill_points_used) {
-            const {type, id, color} = getSkillByElement(center.girl.element, config.activeSkill.ocd);
+        let opponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
-            if (config.activeSkill.noIcon) {
-                applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
-            } else {
-                const tooltip = `${type} ${center.skills[id].skill.display_value_text}`;
-                addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild, type, tooltip);
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                if (!opponentStats[id]) { opponentStats[id] = {}; }
+
+                const STAT_ELEMENT_MAP = {
+                    'damage': {'div': '#player_attack_stat', 'span': '#stats-damage'},
+                    'remaining_ego': {'div': '#player_ego_stat', 'span': '#stats-ego'},
+                    'defense': {'div': '#player_defence_stat', 'span': '#stats-defense'},
+                    'chance': {'div': '#player_harmony_stat', 'span': '#stats-chance'},
+                };
+
+                for (const stat in STAT_ELEMENT_MAP) {
+                    const value = OPPONENT_DETAILS_BY_ID[id].player[stat];
+                    const oldValue = opponentStats[id][stat]?.value || 0;
+                    let lastDiff = opponentStats[id][stat]?.lastDiff || 0;
+                    let lastChangeTime = opponentStats[id][stat]?.lastChangeTime || 0;
+
+                    const statDiff = value - oldValue;
+                    const percentage = value > 0 ? (100 * statDiff) / value : 0;
+                    const lastPercentage = oldValue > 0 ? (100 * lastDiff) / oldValue : 0;
+
+                    // shadow to make text more readable on some games
+                    opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.textShadow = "1px 1px 0px #000000";
+
+                    if (statDiff ** 2 > 1e4) { // ignore small changes
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color =
+                            (lastChangeTime > 0) ? ((statDiff > 0) ? "#ec0039" : "#32bc4f") : "#ffffff";
+                        lastDiff = statDiff;
+                        lastChangeTime = (oldValue > 0) ? Date.now() : 0;
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
+                            `Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(percentage)}%)`);
+                    } else if (lastChangeTime > 0) {
+                        const timeDiff = Date.now() - lastChangeTime;
+                        const statColor = (timeDiff < 60 * 1000) ?
+                            ((lastDiff > 0) ? "#ec0039" : "#32bc4f") :
+                            ((lastDiff > 0) ? "#ff8aa6" : "#a4e7b2"); // lighter highlight color for changes older than 1 minute
+                        if (timeDiff < 10 * 60 * 1000) { // only highlight changes in the last 10 minutes
+                            opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
+                        }
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
+                            `Last Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)` +
+                            `<br>${FORMAT.time(timeDiff)} ago`);
+                    } else {
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since league start');
+                    }
+                    opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
+                }
             }
+        );
 
-        }
+        localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
+    }
+
+    function markActiveSkill() {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                const center = OPPONENT_DETAILS_BY_ID[id].player.team.girls[0];
+
+                if (center.skill_tiers_info['5']?.skill_points_used) {
+                    const {type, id, color} = getSkillByElement(center.girl.element, config.activeSkill.ocd);
+
+                    if (config.activeSkill.noIcon) {
+                        applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
+                    } else {
+                        const tooltip = `${type} ${center.skills[id].skill.display_value_text}`;
+                        addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild, type, tooltip);
+                    }
+                }
+            }
+        );
     }
 
     function applySkillColor(nickname, color) {
@@ -371,75 +381,129 @@
         team_icons.appendChild(getSkillIcon(type, {tooltip}));
     }
 
-    function updateUsedTeams(opponentRow, id, opponentData) {
-        let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
-        const opponentTeam = OPPONENT_DETAILS_BY_ID[id].player.team;
-        let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
-            ? getSkillByElement(opponentTeam.girls[0].girl.element).type
-            : null;
+    function updateUsedTeams(opponentData) {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-        const currentTeam = JSON.stringify({ theme: opponentTeam.theme, type: type });
-        if (!teamsSet.has(currentTeam)) {
-            teamsSet.add(currentTeam);
-            GITHUB_PARAMS.needsUpdate = true;
-        }
-        const teams= Array.from(teamsSet).sort();
-        opponentData[id].teams = teams;
+                // no need to collect your own teams
+                if (id === shared.Hero.infos.id) { return; }
 
-        let tooltip = document.createElement('div');
-        tooltip.innerText = 'Used Teams:';
-        teams.forEach((t)=>{
-            let team = JSON.parse(t);
-            let div = document.createElement('div');
-            team.theme.split(',').forEach((element)=>{
-                let elementIcon = getElementIcon(element,
-                    { style: 'height: 16px; width: 16px;', });
-                div.appendChild(elementIcon);
-            });
-            if (div.childElementCount === 2) {
-                // overlap dual elements
-                div.firstElementChild.style.marginRight = '-7px';
+                let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
+                const opponentTeam = OPPONENT_DETAILS_BY_ID[id].player.team;
+                let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
+                    ? getSkillByElement(opponentTeam.girls[0].girl.element).type
+                    : null;
+
+                const currentTeam = JSON.stringify({theme: opponentTeam.theme, type: type});
+                if (!teamsSet.has(currentTeam)) {
+                    teamsSet.add(currentTeam);
+                    GITHUB_PARAMS.needsUpdate = true;
+                }
+                const teams = Array.from(teamsSet).sort();
+                opponentData[id].teams = teams;
+
+                let tooltip = document.createElement('div');
+                tooltip.innerText = 'Used Teams:';
+                teams.forEach((t) => {
+                    let team = JSON.parse(t);
+                    let div = document.createElement('div');
+                    team.theme.split(',').forEach((element) => {
+                        let elementIcon = getElementIcon(element,
+                            {style: 'height: 16px; width: 16px;',});
+                        div.appendChild(elementIcon);
+                    });
+                    if (div.childElementCount === 2) {
+                        // overlap dual elements
+                        div.firstElementChild.style.marginRight = '-7px';
+                    }
+                    if (team.type && team.type !== 'none') {
+                        let skillIcon = getSkillIcon(team.type,
+                            {style: 'height: 16px; width: 16px;',});
+                        div.appendChild(skillIcon);
+                    }
+                    tooltip.appendChild(div);
+                })
+                opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML);
             }
-            if (team.type && team.type !== 'none') {
-                let skillIcon = getSkillIcon(team.type,
-                    { style: 'height: 16px; width: 16px;', });
-                div.appendChild(skillIcon);
-            }
-            tooltip.appendChild(div);
-        })
-        opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML)
+        );
     }
 
-    function addAverage(opponentRow, id, opponentData) {
-        // must run after updateScores since it depends on score and totalLostPoints
-        if (!opponentRow.querySelector('.data-column[column="average"]')) {
-            const pointsColumn = opponentRow.querySelector('.data-column[column="player_league_points"]');
-            const {score, totalLostPoints} = opponentData[id];
-            const average = score ? 25 * score / (score + totalLostPoints) : 0;
+    function addAverageColumn() {
+        const tableHeader = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
+        // this will run after every sorting of the table so the header
+        // only needs to be created the first time
+        if (!tableHeader.querySelector('.data-column[column="average"]')) {
+
+            const pointsColumn = tableHeader.querySelector('.data-column[column="player_league_points"]');
+
+            let span = document.createElement('span');
+            span.innerHTML = 'Average';
 
             let avgColumn = document.createElement('div');
-            avgColumn.classList = pointsColumn.classList;
+            avgColumn.classList.add('data-column', 'head-column');
             avgColumn.setAttribute('column', 'average');
-            avgColumn.style.minWidth = '1.8rem';
             avgColumn.style.textAlign = 'center';
-            if (config.average.color) {
-                avgColumn.style.color = getAverageColor(average);
-            }
-            avgColumn.innerHTML = FORMAT.average(average);
+            avgColumn.appendChild(span);
+            avgColumn.style.minWidth = '1.8rem';
 
             pointsColumn.after(avgColumn);
         }
+
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                if (!opponentRow.querySelector('.data-column[column="average"]')) {
+                    const pointsColumn = opponentRow.querySelector('.data-column[column="player_league_points"]');
+
+                    let avgColumn = document.createElement('div');
+                    avgColumn.classList = pointsColumn.classList;
+                    avgColumn.setAttribute('column', 'average');
+                    avgColumn.style.minWidth = '1.8rem';
+                    avgColumn.style.textAlign = 'center';
+
+                    pointsColumn.after(avgColumn);
+                }
+            }
+        );
     }
 
-    function addLevelToAvatar(opponentRow, id) {
-        let avatar = opponentRow.querySelector('.data-column[column="nickname"] .square-avatar-wrapper');
-        // some scripts remove the avatar
-        if (!avatar) { config.hideLevel.move = false; return; }
-        avatar.style.position = 'relative';
-        let lvl = document.createElement('div');
-        lvl.innerHTML = OPPONENT_DETAILS_BY_ID[id].level;
-        lvl.setAttribute('style', ` width: 100%; position: absolute; bottom: -0.2rem; text-align: center; font-size: 0.66rem`);
-        avatar.appendChild(lvl);
+    function updateAverage(opponentData) {
+        // must run after updateScores since it depends on score and totalLostPoints
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const avgColumn = opponentRow.querySelector('.data-column[column="average"]')
+
+                const {score, totalLostPoints} = opponentData[id];
+                const average = score ? 25 * score / (score + totalLostPoints) : 0;
+
+                if (config.average.color) {
+                    avgColumn.style.color = getAverageColor(average);
+                }
+
+                avgColumn.innerHTML = FORMAT.average(average);
+            }
+        );
+    }
+
+    function addLevelToAvatar() {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                let avatar = opponentRow.querySelector('.data-column[column="nickname"] .square-avatar-wrapper');
+                // some scripts remove the avatar
+                if (!avatar) {
+                    config.hideLevel.move = false;
+                    return;
+                }
+                avatar.style.position = 'relative';
+                let lvl = document.createElement('div');
+                lvl.innerHTML = OPPONENT_DETAILS_BY_ID[id].level;
+                lvl.setAttribute('style', ` width: 100%; position: absolute; bottom: -0.2rem; text-align: center; font-size: 0.66rem`);
+                avatar.appendChild(lvl);
+            }
+        );
     }
 
     function getScoreColor(lostPoints) {
