@@ -67,7 +67,11 @@
         info('no opponents found');
         return;
     }
-    const OPPONENT_DETAILS_BY_ID = opponents_list.reduce(function(map,object) { map[object.player.id_fighter] = object; return map; }, {})
+    const OPPONENT_DETAILS_BY_ID = opponents_list.reduce((map, object) => {
+        object.HHLT = {}; // temporary storage for table modification
+        map[object.player.id_fighter] = object;
+        return map;
+        }, {})
 
     if (CONFIG.githubStorage.enabled) {
         if (!window.LeagueTrackerGitHubConfig) {
@@ -135,10 +139,10 @@
         // use local data in case the read from GitHub failed
         if (!Object.keys(opponentData).length) { opponentData = localStorageData; }
 
-        updateTable(opponentData);
+        calculateChanges(opponentData);
 
         // redo changes after sorting the table
-        $(document).on('league:table-sorted', () => { updateTable(opponentData); })
+        $(document).on('league:table-sorted', () => { calculateChanges(opponentData); })
 
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
@@ -189,7 +193,7 @@
         document.head.appendChild(sheet);
     }
 
-    function updateTable(opponentData) {
+    function calculateChanges(opponentData) {
 
         if (CONFIG.hideLevel.move) {
             addLevelToAvatar();
@@ -201,7 +205,8 @@
 
         updateStats();
 
-        updateScore(opponentData);
+        updateScores(opponentData);
+        writeScores();
 
         if (CONFIG.usedTeams.enabled) {
             updateUsedTeams(opponentData);
@@ -213,7 +218,8 @@
         }
     }
 
-    function updateScore(opponentData) {
+
+    function updateScores(opponentData) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
@@ -231,56 +237,80 @@
                 const newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
                 const totalLostPoints = oldLostPoints + newLostPoints;
 
-                // add lost points below score
-                opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML += `<br>${-totalLostPoints}`;
+                let changes = {
+                    color: getScoreColor(totalLostPoints),
+                    conditions: {},
+                }
+
+                if (gainedScore > 0) {
+                    opponentData[id] = {
+                        ...opponentData[id],
+                        score,
+                        totalLostPoints,
+                        lastDiff: gainedScore,
+                        lastLostPoints: newLostPoints,
+                        lastChangeTime: PAGE_LOAD_TS
+                    }
+
+                    changes.conditions.update = true;
+                    GITHUB_PARAMS.needsUpdate = true;
+                    // write score change and newly lost points
+                    changes.pointHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
+                    changes.tooltip = `Total Score: ${opponentData[id].score}` +
+                                    `<br>Total Lost Points: -${opponentData[id].totalLostPoints}`;
+                } else {
+                    // add lost points below score
+                    changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-totalLostPoints)}`
+
+                    if (lastDiff > 0) {
+                        changes.conditions.addChangeTime = true;
+                        changes.lastChangeTime = lastChangeTime;
+                        changes.tooltip = `Last Score Diff: ${lastDiff}` +
+                            `<br>Last Lost Points: ${lastLostPoints}`;
+                    }
+                }
+
+                OPPONENT_DETAILS_BY_ID[id].HHLT.score = changes;
+            }
+        );
+    }
+
+    function writeScores() {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                const changes = OPPONENT_DETAILS_BY_ID[id].HHLT.score;
 
                 if (CONFIG.scoreColor.enabled) {
-                    const scoreColor = getScoreColor(totalLostPoints)
                     if (CONFIG.scoreColor.rank) {
-                        opponentRow.querySelector('.data-column[column="place"]').style.color = scoreColor;
+                        opponentRow.querySelector('.data-column[column="place"]').style.color = changes.color;
                     }
                     if (CONFIG.scoreColor.name) {
                         // remove clubmate class from League++ so clubmates get colored correctly too
                         opponentRow.querySelector('.data-column[column="nickname"]').classList.remove("clubmate");
-                        opponentRow.querySelector('.data-column[column="nickname"]').style.color = scoreColor;
+                        opponentRow.querySelector('.data-column[column="nickname"]').style.color = changes.color;
                     }
                     if (CONFIG.scoreColor.level) {
-                        opponentRow.querySelector('.data-column[column="level"]').style.color = scoreColor;
+                        opponentRow.querySelector('.data-column[column="level"]').style.color = changes.color;
                     }
                     if (CONFIG.scoreColor.points) {
-                        opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = scoreColor;
+                        opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = changes.color;
                     }
                 }
 
-                if (gainedScore > 0 || lastChangeTime === PAGE_LOAD_TS) {
-                    if (gainedScore > 0) {
-                        GITHUB_PARAMS.needsUpdate = true;
-                        opponentData[id] = {
-                            ...opponentData[id],
-                            score,
-                            totalLostPoints,
-                            lastDiff: gainedScore,
-                            lastLostPoints: newLostPoints,
-                            lastChangeTime: PAGE_LOAD_TS
-                        }
-                    }
+                if (changes.conditions.update) {
                     opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = "#16ffc4";
-                    opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
-                    opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                        `Total Score: ${opponentData[id].score}<br>Total Lost Points: -${opponentData[id].totalLostPoints}`);
-                } else if (lastDiff > 0) {
-                    if (lastChangeTime > 0) {
-                        const timeDiff = FORMAT.time(Date.now() - lastChangeTime);
-                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                            `Last Score Diff: ${lastDiff}` +
-                            `<br>Last Lost Points: ${lastLostPoints}` +
-                            `<br>${timeDiff} ago`);
-                    } else {
-                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip',
-                            `Last Score Diff: ${lastDiff}` +
-                            `<br>Last Lost Points: ${lastLostPoints}`);
-                    }
                 }
+
+                opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = changes.pointHTML;
+                if (changes.tooltip){
+                    if (changes.conditions.addChangeTime) {
+                        changes.tooltip += `<br>${FORMAT.time(Date.now() - changes.lastChangeTime)} ago`;
+                    }
+                    opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip);
+                }
+                OPPONENT_DETAILS_BY_ID[id].HHLT.score = changes;
             }
         );
     }
@@ -611,6 +641,9 @@
 
     function getFormatters() {
         let formatters = {};
+
+        formatters.score = Intl.NumberFormat('en',{
+                signDisplay: "negative"}).format;
 
         formatters.statDiff = Intl.NumberFormat('en', {
                 notation: 'compact',
