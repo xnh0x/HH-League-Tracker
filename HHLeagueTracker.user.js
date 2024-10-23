@@ -140,9 +140,10 @@
         if (!Object.keys(opponentData).length) { opponentData = localStorageData; }
 
         calculateChanges(opponentData);
+        writeTable();
 
         // redo changes after sorting the table
-        $(document).on('league:table-sorted', () => { calculateChanges(opponentData); })
+        $(document).on('league:table-sorted', () => { writeTable(); })
 
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
@@ -194,31 +195,36 @@
     }
 
     function calculateChanges(opponentData) {
+        updateScores(opponentData);
 
+        updateStats();
+
+        if (CONFIG.usedTeams.enabled) {
+            updateUsedTeams(opponentData);
+        }
+    }
+
+    function writeTable() {
         if (CONFIG.hideLevel.move) {
             addLevelToAvatar();
+        }
+
+        writeScores();
+
+        if (CONFIG.average.enabled) {
+            addAverageColumn();
         }
 
         if (CONFIG.activeSkill.enabled) {
             markActiveSkill();
         }
 
-        updateScores(opponentData);
-        writeScores();
-
-        updateStats();
-        writeStats();
-
         if (CONFIG.usedTeams.enabled) {
-            updateUsedTeams(opponentData);
             writeTeams();
         }
 
-        if (CONFIG.average.enabled) {
-            addAverageColumn();
-        }
+        writeStats();
     }
-
 
     function updateScores(opponentData) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
