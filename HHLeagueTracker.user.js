@@ -203,10 +203,11 @@
             markActiveSkill();
         }
 
-        updateStats();
-
         updateScores(opponentData);
         writeScores();
+
+        updateStats();
+        writeStats();
 
         if (CONFIG.usedTeams.enabled) {
             updateUsedTeams(opponentData);
@@ -316,7 +317,6 @@
     }
 
     function updateStats() {
-
         let opponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
@@ -325,14 +325,14 @@
 
                 if (!opponentStats[id]) { opponentStats[id] = {}; }
 
-                const STAT_ELEMENT_MAP = {
-                    'damage': {'div': '#player_attack_stat', 'span': '#stats-damage'},
-                    'remaining_ego': {'div': '#player_ego_stat', 'span': '#stats-ego'},
-                    'defense': {'div': '#player_defence_stat', 'span': '#stats-defense'},
-                    'chance': {'div': '#player_harmony_stat', 'span': '#stats-chance'},
-                };
+                const STATS = ['damage', 'remaining_ego', 'defense', 'chance'];
 
-                for (const stat in STAT_ELEMENT_MAP) {
+                let allStatChanges = {};
+
+                for (const i in STATS) {
+                    const stat = STATS[i];
+
+                    let statChanges = { conditions: {} };
                     const value = OPPONENT_DETAILS_BY_ID[id].player[stat];
                     const oldValue = opponentStats[id][stat]?.value || 0;
                     let lastDiff = opponentStats[id][stat]?.lastDiff || 0;
@@ -342,36 +342,60 @@
                     const percentage = value > 0 ? (100 * statDiff) / value : 0;
                     const lastPercentage = oldValue > 0 ? (100 * lastDiff) / oldValue : 0;
 
-                    // shadow to make text more readable on some games
-                    opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.textShadow = "1px 1px 0px #000000";
-
-                    if (statDiff ** 2 > 1e4) { // ignore small changes
-                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color =
-                            (lastChangeTime > 0) ? ((statDiff > 0) ? "#ec0039" : "#32bc4f") : "#ffffff";
+                    if (Math.abs(statDiff) > 100) { // ignore changes < 100
                         lastDiff = statDiff;
-                        lastChangeTime = (oldValue > 0) ? Date.now() : 0;
-                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                            `Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(percentage)}%)`);
+                        lastChangeTime = PAGE_LOAD_TS;
+                        statChanges.tooltip = `Last Stat Diff: ${FORMAT.statDiff(statDiff)} (${FORMAT.statPercent(percentage)}%)`;
                     } else if (lastChangeTime > 0) {
-                        const timeDiff = Date.now() - lastChangeTime;
-                        const statColor = (timeDiff < 60 * 1000) ?
-                            ((lastDiff > 0) ? "#ec0039" : "#32bc4f") :
-                            ((lastDiff > 0) ? "#ff8aa6" : "#a4e7b2"); // lighter highlight color for changes older than 1 minute
-                        if (timeDiff < 10 * 60 * 1000) { // only highlight changes in the last 10 minutes
-                            opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
-                        }
-                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                            `Last Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)` +
-                            `<br>${FORMAT.time(timeDiff)} ago`);
+                        statChanges.tooltip = `Last Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)`;
                     } else {
-                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since league start');
+                        statChanges.conditions.neverChanged = true;
                     }
+
+                    statChanges.conditions.positiveDiff = lastDiff > 0;
+                    statChanges.lastChangeTime = lastChangeTime
                     opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
+                    allStatChanges[stat] = statChanges;
                 }
+
+                OPPONENT_DETAILS_BY_ID[id].HHLT.stats = allStatChanges;
             }
         );
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
+    }
+
+    function writeStats() {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                const STAT_ELEMENT_MAP = {
+                    'damage': {'div': '#player_attack_stat', 'span': '#stats-damage'},
+                    'remaining_ego': {'div': '#player_ego_stat', 'span': '#stats-ego'},
+                    'defense': {'div': '#player_defence_stat', 'span': '#stats-defense'},
+                    'chance': {'div': '#player_harmony_stat', 'span': '#stats-chance'},
+                };
+
+                for (const stat in STAT_ELEMENT_MAP) {
+                    let statChanges = OPPONENT_DETAILS_BY_ID[id].HHLT.stats[stat];
+
+                    if (statChanges.conditions.neverChanged) {
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since league start');
+                    } else {
+                        const timeDiff = Date.now() - statChanges.lastChangeTime;
+
+                        const statColor = (timeDiff < 60 * 1000)
+                            ? (statChanges.conditions.positiveDiff ? "#ec0039" : "#32bc4f")
+                            : (statChanges.conditions.positiveDiff ? "#ff8aa6" : "#a4e7b2"); // lighter highlight color for changes older than 1 minute
+                        if (timeDiff < 10 * 60 * 1000) { // only highlight changes in the last 10 minutes
+                            opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
+                        }
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', statChanges.tooltip + `<br>${FORMAT.time(timeDiff)} ago`);
+                    }
+                }
+            }
+        );
     }
 
     function markActiveSkill() {
