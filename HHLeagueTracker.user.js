@@ -211,6 +211,7 @@
 
         if (CONFIG.usedTeams.enabled) {
             updateUsedTeams(opponentData);
+            writeTeams();
         }
 
         if (CONFIG.average.enabled) {
@@ -478,7 +479,21 @@
                     }
                     tooltip.appendChild(div);
                 })
-                opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', tooltip.innerHTML);
+                OPPONENT_DETAILS_BY_ID[id].HHLT.teams = { tooltip: tooltip.innerHTML };
+            }
+        );
+    }
+
+    function writeTeams() {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                // no data is kept for yourself
+                if (id === shared.Hero.infos.id) { return; }
+
+                // add tooltip to the team power element
+                opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', OPPONENT_DETAILS_BY_ID[id].HHLT.teams.tooltip);
             }
         );
     }
