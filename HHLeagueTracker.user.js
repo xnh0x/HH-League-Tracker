@@ -216,7 +216,6 @@
 
         if (CONFIG.average.enabled) {
             addAverageColumn();
-            updateAverage(opponentData);
         }
     }
 
@@ -238,8 +237,11 @@
                 const gainedScore = score - oldScore;
                 const newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
                 const totalLostPoints = oldLostPoints + newLostPoints;
+                const average = score ? 25 * score / (score + totalLostPoints) : 0;
 
                 let changes = {
+                    average: FORMAT.average(average),
+                    averageColor: getAverageColor(average),
                     color: getScoreColor(totalLostPoints),
                     conditions: {},
                 }
@@ -312,7 +314,6 @@
                     }
                     opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip);
                 }
-                OPPONENT_DETAILS_BY_ID[id].HHLT.score = changes;
             }
         );
     }
@@ -521,36 +522,22 @@
 
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                if (!opponentRow.querySelector('.data-column[column="average"]')) {
-                    const pointsColumn = opponentRow.querySelector('.data-column[column="player_league_points"]');
-
-                    let avgColumn = document.createElement('div');
-                    avgColumn.classList = pointsColumn.classList;
-                    avgColumn.setAttribute('column', 'average');
-                    avgColumn.style.minWidth = '1.8rem';
-                    avgColumn.style.textAlign = 'center';
-
-                    pointsColumn.after(avgColumn);
-                }
-            }
-        );
-    }
-
-    function updateAverage(opponentData) {
-        // must run after updateScores since it depends on score and totalLostPoints
-        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
-            opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
-                const avgColumn = opponentRow.querySelector('.data-column[column="average"]')
+                const pointsColumn = opponentRow.querySelector('.data-column[column="player_league_points"]');
 
-                const {score, totalLostPoints} = opponentData[id];
-                const average = score ? 25 * score / (score + totalLostPoints) : 0;
+                let avgColumn = document.createElement('div');
+                avgColumn.classList = pointsColumn.classList;
+                avgColumn.setAttribute('column', 'average');
+                avgColumn.style.minWidth = '1.8rem';
+                avgColumn.style.textAlign = 'center';
 
                 if (CONFIG.average.color) {
-                    avgColumn.style.color = getAverageColor(average);
+                    avgColumn.style.color = OPPONENT_DETAILS_BY_ID[id].HHLT.score.averageColor;
                 }
 
-                avgColumn.innerHTML = FORMAT.average(average);
+                avgColumn.innerHTML = OPPONENT_DETAILS_BY_ID[id].HHLT.score.average;
+
+                pointsColumn.after(avgColumn);
             }
         );
     }
