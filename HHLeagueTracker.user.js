@@ -60,6 +60,7 @@
         leagueEnd: 'HHLeagueTrackerLeagueEnd'
     }
 
+    const MY_ID = shared.Hero.infos.id;
     const PAGE_LOAD_TS = window.server_now_ts * 1000
     const LEAGUE_END_TS = (window.server_now_ts + window.season_end_at) * 1000;
 
@@ -71,7 +72,11 @@
         object.HHLT = {}; // temporary storage for table modification
         map[object.player.id_fighter] = object;
         return map;
-        }, {})
+    }, {})
+    const FIGHTS_DONE = opponents_list.reduce((total, object) => {
+        if (object.player.id_fighter !== MY_ID) { total += Object.values(object.match_history)[0].reduce((c,m) => {return m ? c+1 : c;}, 0); }
+        return total; }, 0);
+    const MY_LOST_POINTS = FIGHTS_DONE * 25 - OPPONENT_DETAILS_BY_ID[MY_ID].player_league_points;
 
     if (CONFIG.githubStorage.enabled) {
         if (!window.LeagueTrackerGitHubConfig) {
@@ -236,13 +241,26 @@
                 const score = OPPONENT_DETAILS_BY_ID[id].player_league_points;
                 const oldScore = opponentData[id].score || 0;
                 const oldLostPoints = opponentData[id].totalLostPoints || 0;
-                const lastDiff = opponentData[id].lastDiff || 0;
-                const lastLostPoints = opponentData[id].lastLostPoints || 0;
-                const lastChangeTime = opponentData[id].lastChangeTime || 0;
 
                 const gainedScore = score - oldScore;
-                const newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
-                const totalLostPoints = oldLostPoints + newLostPoints;
+
+                let newLostPoints = 25 - (((gainedScore + 24) % 25) + 1);
+                let totalLostPoints = oldLostPoints + newLostPoints;
+
+                // no need to guess your own
+                if (id === MY_ID) {
+                    const correction = MY_LOST_POINTS - totalLostPoints;
+                    if (correction && gainedScore === 0) {
+                        // this fixes a small inconsistency that can happen if you share
+                        // the storage repo with someone who is in your league
+                        opponentData[id].lastLostPoints += correction;
+                        opponentData[id].totalLostPoints += correction;
+                        GITHUB_PARAMS.needsUpdate = true;
+                    }
+                    totalLostPoints = MY_LOST_POINTS;
+                    newLostPoints = totalLostPoints - oldLostPoints;
+                }
+
                 const average = score ? 25 * score / (score + totalLostPoints) : 0;
 
                 let changes = {
@@ -272,11 +290,12 @@
                     // add lost points below score
                     changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-totalLostPoints)}`
 
+                    const lastDiff = opponentData[id].lastDiff || 0;
                     if (lastDiff > 0) {
                         changes.conditions.addChangeTime = true;
-                        changes.lastChangeTime = lastChangeTime;
+                        changes.lastChangeTime = opponentData[id].lastChangeTime;
                         changes.tooltip = `Last Score Diff: ${lastDiff}` +
-                            `<br>Last Lost Points: ${lastLostPoints}`;
+                            `<br>Last Lost Points: ${opponentData[id].lastLostPoints}`;
                     }
                 }
 
@@ -449,7 +468,7 @@
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
                 // no need to collect your own teams
-                if (id === shared.Hero.infos.id) { return; }
+                if (id === MY_ID) { return; }
 
                 let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
                 const opponentTeam = OPPONENT_DETAILS_BY_ID[id].player.team;
@@ -497,7 +516,7 @@
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
                 // no data is kept for yourself
-                if (id === shared.Hero.infos.id) { return; }
+                if (id === MY_ID) { return; }
 
                 // add tooltip to the team power element
                 opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', OPPONENT_DETAILS_BY_ID[id].HHLT.teams.tooltip);
