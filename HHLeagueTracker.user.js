@@ -150,6 +150,15 @@
         // redo changes after sorting the table
         $(document).on('league:table-sorted', () => { writeTable(); })
 
+        if (CONFIG.hideLevel.move) {
+            // swap lvl and name header to have lvl above the avatar
+            let headers = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
+            let lvl = headers.querySelector('.data-column[column="level"]')
+            let name = headers.querySelector('.data-column[column="nickname"]')
+            headers.removeChild(lvl);
+            name.before(lvl);
+        }
+
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
@@ -189,10 +198,15 @@
             '.result { box-shadow: none !important; }',
             // shadow to improve readability in some games
             '.data-column:not(.head-column) { text-shadow: 1px 1px 0px #000 !important; }',
+            // resize rank so the name header doesn't overlap
+            '.data-row.head-row .head-column[column="place"] { width: 8rem !important; }',
             // outline for level on avatar
             CONFIG.hideLevel.move ? '.data-column[column="nickname"] .square-avatar-wrapper { text-shadow:  1px 1px 0px #000 , -1px 1px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000; }' : '',
+            // resize the headers so level is the same size as avatar
+            CONFIG.hideLevel.move ? '.data-row.head-row .head-column[column="level"] { width: 2.5rem; }' : '',
             // remove level column
-            CONFIG.hideLevel.enabled ? '.data-row .data-column[column="level"], .data-row .head-column[column="level"] { display: none; }' : '',
+            CONFIG.hideLevel.enabled ? '.data-row.body-row .data-column[column="level"] { display: none; }' : '',
+            CONFIG.hideLevel.enabled && !CONFIG.hideLevel.move ? '.data-row.head-row .data-column[column="level"] { display: none; }' : '',
             // reduce line height to fit two lines of text in the row
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
         ].join(' ');
