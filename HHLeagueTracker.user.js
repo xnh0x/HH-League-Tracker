@@ -299,7 +299,7 @@
                     // write score change and newly lost points
                     changes.pointHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
                     changes.tooltip = `Total Score: ${opponentData[id].score}` +
-                                    `<br>Total Lost Points: -${opponentData[id].totalLostPoints}`;
+                                    `<br>Total Lost Points: ${opponentData[id].totalLostPoints}`;
                 } else {
                     // add lost points below score
                     changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-totalLostPoints)}`
