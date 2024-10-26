@@ -349,9 +349,10 @@
                 opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = changes.pointHTML;
                 if (changes.tooltip){
                     if (changes.conditions.addChangeTime) {
-                        changes.tooltip += `<br>${FORMAT.time(Date.now() - changes.lastChangeTime)} ago`;
+                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip + `<br>${FORMAT.time(Date.now() - changes.lastChangeTime)} ago`);
+                    } else {
+                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip);
                     }
-                    opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip);
                 }
             }
         );
