@@ -837,32 +837,18 @@
     async function loadConfig() {
         // defaults
         let config = {
-            githubStorage: {
-                enabled: true,
-            },
-            scoreColor: {
-                enabled: true,
-                rank: false,
-                name: false,
-                level: false,
-                points: true,
-            },
-            activeSkill: {
-                enabled: false,
-                noIcon: false,
-                ocd: false,
-            },
-            usedTeams: {
-                enabled: false,
-            },
-            average: {
-                enabled: false,
-                color: false,
-            },
-            hideLevel: {
-                enabled: false,
-                move: false,
-            },
+            githubStorage:
+                { enabled: true },
+            scoreColor:
+                { enabled: true, rank: false, name: false, level: false, points: true },
+            activeSkill:
+                { enabled: false, noIcon: false, ocd: false },
+            usedTeams:
+                { enabled: false },
+            average:
+                { enabled: false, color: false },
+            hideLevel:
+                { enabled: false, move: false },
         };
 
         // changing config requires HH++
