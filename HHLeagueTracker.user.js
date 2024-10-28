@@ -302,7 +302,7 @@
                                     `<br>Total Lost Points: ${opponentData[id].totalLostPoints}`;
                 } else {
                     // add lost points below score
-                    changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-totalLostPoints)}`
+                    changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-totalLostPoints || 0)}` // this avoids -0, signDisplay 'negative' isn't supported by old firefox versions
 
                     const lastDiff = opponentData[id].lastDiff || 0;
                     if (lastDiff > 0) {
@@ -708,8 +708,7 @@
     function getFormatters() {
         let formatters = {};
 
-        formatters.score = Intl.NumberFormat('en',{
-                signDisplay: "negative"}).format;
+        formatters.score = Intl.NumberFormat('en',).format;
 
         formatters.statDiff = Intl.NumberFormat('en', {
                 notation: 'compact',
