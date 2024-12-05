@@ -68,6 +68,11 @@
         info('no opponents found');
         return;
     }
+
+    const LEAGUE_ENDING = window.season_end_at < 10 * 60;
+    const TOTAL_FIGHTS = (opponents_list.length - 1) * 3;
+    const MAX_SCORE = TOTAL_FIGHTS * 25;
+
     const OPPONENT_DETAILS_BY_ID = opponents_list.reduce((map, object) => {
         object.HHLT = {}; // temporary storage for table modification
         map[object.player.id_fighter] = object;
@@ -296,7 +301,15 @@
                     conditions: {},
                 }
 
-                if (gainedScore > 0) {
+                if (LEAGUE_ENDING && CONFIG.screenshot.enabled) {
+                    // since the league is about to end, calculate average and lost points as if all fights are done
+                    const finalAverage = 25 * score / MAX_SCORE;
+                    const finalLostPoints = MAX_SCORE - score;
+                    changes.average = FORMAT.average(finalAverage);
+                    changes.averageColor = getAverageColor(finalAverage);
+                    changes.color = getScoreColor(finalLostPoints);
+                    changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-finalLostPoints || 0)}` // this avoids -0, signDisplay 'negative' isn't supported by old firefox versions
+                } else if (gainedScore > 0) {
                     changes.conditions.update = true;
                     // write score change and newly lost points
                     changes.pointHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
@@ -851,6 +864,8 @@
                 { enabled: false, color: false },
             hideLevel:
                 { enabled: false, move: false },
+            screenshot:
+                { enabled: true },
         };
 
         // changing config requires HH++
@@ -1002,6 +1017,21 @@
             },
         });
         config.usedTeams.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'screenshot',
+                label: 'If the league is about to end (<5m) calculate average and lost points as if all fights are done',
+                default: true,
+            },
+            run() {
+                config.screenshot = {
+                    enabled: true,
+                };
+            },
+        });
+        config.screenshot.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
