@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.6
+// @version      1.6.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -154,6 +154,7 @@
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
+                if (!opponentData[id]) { opponentData[id] = {}; }
                 opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
             }
         );
@@ -254,8 +255,6 @@
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
-
-                if (!opponentData[id]) { opponentData[id] = {}; }
 
                 const score = OPPONENT_DETAILS_BY_ID[id].player_league_points;
                 const oldScore = opponentData[id].score || 0;
