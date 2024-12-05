@@ -144,6 +144,15 @@
         // use local data in case the read from GitHub failed
         if (!Object.keys(opponentData).length) { opponentData = localStorageData; }
 
+        // add nickname to make browsing the json a little more convenient
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+
+                opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
+            }
+        );
+
         calculateChanges(opponentData);
         writeTable();
 
@@ -158,15 +167,6 @@
             headers.removeChild(lvl);
             name.before(lvl);
         }
-
-        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
-            opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
-
-                // add nickname to make browsing the json a little more convenient
-                opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
-            }
-        );
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
         if (CONFIG.githubStorage.enabled) {
