@@ -275,6 +275,18 @@
                     newLostPoints = totalLostPoints - oldLostPoints;
                 }
 
+                if (gainedScore > 0) {
+                    opponentData[id] = {
+                        ...opponentData[id],
+                        score,
+                        totalLostPoints,
+                        lastDiff: gainedScore,
+                        lastLostPoints: newLostPoints,
+                        lastChangeTime: PAGE_LOAD_TS
+                    }
+                    GITHUB_PARAMS.needsUpdate = true;
+                }
+
                 const average = score ? 25 * score / (score + totalLostPoints) : 0;
 
                 let changes = {
@@ -285,17 +297,7 @@
                 }
 
                 if (gainedScore > 0) {
-                    opponentData[id] = {
-                        ...opponentData[id],
-                        score,
-                        totalLostPoints,
-                        lastDiff: gainedScore,
-                        lastLostPoints: newLostPoints,
-                        lastChangeTime: PAGE_LOAD_TS
-                    }
-
                     changes.conditions.update = true;
-                    GITHUB_PARAMS.needsUpdate = true;
                     // write score change and newly lost points
                     changes.pointHTML = `+${opponentData[id].lastDiff}<br>${-opponentData[id].lastLostPoints}`;
                     changes.tooltip = `Total Score: ${opponentData[id].score}` +
