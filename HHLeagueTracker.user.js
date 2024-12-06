@@ -241,6 +241,10 @@
 
     function createBoosterCountdown() {
         const next = getNextBoosterExpiration();
+        if (next.expiration === Infinity) {
+            info('no boosted unfought opponents available')
+            return;
+        }
         // if Zoo's script is used place the booster timer
         // to the left of the record button otherwise to
         // the left of the league end timer
