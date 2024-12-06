@@ -34,6 +34,24 @@ Keeps a list of teams the opponents have used this week.
 
 ![Used_teams](https://github.com/user-attachments/assets/8cab496d-5dce-4631-bcb2-94074cb69d89)
 
+### Average (requires HH++ BDSM)
+Adds a column that shows the current average score per fight based on the amount of recorded lost points. 
+
+![Average](https://github.com/user-attachments/assets/a26ac7fd-9b0d-4a09-a1fb-a21aef1e6521)
+
+### Remove Level Column (requires HH++ BDSM)
+Just to save some space since there is a lot of information in the table already. The levels can optionally be displayed on the avatar instead.
+
+![Level_on_Avatar](https://github.com/user-attachments/assets/027d6537-a0fa-4bb1-8166-97ee500a2a81)
+
+### Booster Timer
+Shows the time until the next boosters of unfought opponents expire. Optionally plays a sound once they expire.
+
+![Booster_Timer](https://github.com/user-attachments/assets/82244de7-9273-4919-b012-c15a5ff58b47)
+
+In parenthesis is the current rank to easily find the opponent in the table.
+
+
 ## Setup GitHub Sync
 
 ### Prepare Repo
