@@ -926,7 +926,7 @@
             screenshot:
                 { enabled: true },
             boosterTimer:
-                { enabled: false, sound: false },
+                { enabled: true, sound: false },
         };
 
         // changing config requires HH++
