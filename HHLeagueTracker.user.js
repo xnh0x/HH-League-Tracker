@@ -69,6 +69,10 @@
         return;
     }
 
+    if (CONFIG.boosterTimer.enabled) {
+        createBoosterCountdown();
+    }
+
     const LEAGUE_ENDING = window.season_end_at < 10 * 60;
     const TOTAL_FIGHTS = (opponents_list.length - 1) * 3;
     const MAX_SCORE = TOTAL_FIGHTS * 25;
@@ -217,6 +221,59 @@
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
         ].join(' ');
         document.head.appendChild(sheet);
+    }
+
+    function getNextBoosterExpiration() {
+        const maxNameLength = 12;
+        return opponents_list.reduce((next, object) => {
+            if (object.can_fight
+                && object.boosters.length
+                && object.boosters[0].expiration * 1000 < next.expiration) {
+                next.expiration = object.boosters[0].expiration * 1000;
+                next.name = object.nickname.length > maxNameLength
+                    ? `${object.nickname.substring(0, maxNameLength - 1)}...`
+                    : object.nickname;
+                next.rank = object.place;
+            }
+            return next;
+        }, { name:'', rank: 0, expiration: Infinity });
+    }
+
+    function createBoosterCountdown() {
+        const next = getNextBoosterExpiration();
+        // if Zoo's script is used place the booster timer
+        // to the left of the record button otherwise to
+        // the left of the league end timer
+        const recordLeague = document.querySelector('#leagues .record_league');
+        const insert = recordLeague ?? document.querySelector('#leagues .league_end_in');
+
+        let div1 = document.createElement('div');
+        insert.before(div1);
+        div1.classList.add('booster-timer');
+        let div2 = document.createElement('div');
+        div1.appendChild(div2)
+        div2.classList.add('season-timer', 'timer');
+
+        let p = document.createElement('p');
+        div2.appendChild(p);
+        p.innerHTML = `Boosters expire<br>${next.name} (${next.rank})<br>`;
+        p.style.textAlign = 'center';
+
+        let span = document.createElement('span');
+        p.appendChild(span);
+        span.innerHTML = `${FORMAT.time(next.expiration)}`;
+        span.style.color = '#2296e4';
+
+        const updateTimer = setInterval(function() {
+            const now = new Date().getTime();
+            const timeLeft = PAGE_LOAD_TS + next.expiration - now;
+            if (timeLeft <= 0) {
+                clearInterval(updateTimer);
+                span.innerHTML = "EXPIRED";
+            } else {
+                span.innerHTML = `${FORMAT.time(timeLeft)}`;
+            }
+        }, 1000);
     }
 
     function calculateChanges(opponentData) {
@@ -865,6 +922,8 @@
                 { enabled: false, move: false },
             screenshot:
                 { enabled: true },
+            boosterTimer:
+                { enabled: false, sound: false },
         };
 
         // changing config requires HH++
@@ -1031,6 +1090,27 @@
             },
         });
         config.screenshot.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'boosterTimer',
+                label: 'Show a timer until the next unfought opponent\'s boosters expire' ,
+                default: false,
+                subSettings: [
+                    { key: 'sound', default: false,
+                        label: 'Play a sound once they do',
+                    },
+                ],
+            },
+            run(subSettings) {
+                config.boosterTimer = {
+                    enabled: true,
+                    sound: subSettings.sound,
+                };
+            },
+        });
+        config.boosterTimer.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
