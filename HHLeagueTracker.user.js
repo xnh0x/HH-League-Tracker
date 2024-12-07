@@ -290,13 +290,13 @@
             if (timeLeft <= 0) {
                 clearInterval(updateTimer);
                 span.innerHTML = "EXPIRED";
+                p.onclick = () => {
+                    // after the boosters expire a click will also reload the league
+                    next.row.click();
+                    window.location.reload();
+                }
                 if (CONFIG.boosterTimer.sound) {
                     playUnboostSound();
-                    p.onclick = () => {
-                        // after the boosters expire a click will also reload the league
-                        next.row.click();
-                        window.location.reload();
-                    }
                 }
             } else {
                 span.innerHTML = `${FORMAT.time(timeLeft)}`;
