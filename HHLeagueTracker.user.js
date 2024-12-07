@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.7
+// @version      1.7.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -67,10 +67,6 @@
     if (!opponents_list.length) {
         info('no opponents found');
         return;
-    }
-
-    if (CONFIG.boosterTimer.enabled) {
-        createBoosterCountdown();
     }
 
     const LEAGUE_ENDING = window.season_end_at < 10 * 60;
@@ -163,6 +159,10 @@
             }
         );
 
+        if (CONFIG.boosterTimer.enabled) {
+            createBoosterCountdown();
+        }
+
         calculateChanges(opponentData);
         writeTable();
 
@@ -225,18 +225,30 @@
 
     function getNextBoosterExpiration() {
         const maxNameLength = 12;
-        return opponents_list.reduce((next, object) => {
-            if (object.can_fight
-                && object.boosters.length
-                && object.boosters[0].expiration * 1000 < next.expiration) {
-                next.expiration = object.boosters[0].expiration * 1000;
-                next.name = object.nickname.length > maxNameLength
-                    ? `${object.nickname.substring(0, maxNameLength - 1)}...`
-                    : object.nickname;
-                next.rank = object.place;
+        let next = opponents_list.reduce((next, object) => {
+                if (object.can_fight
+                    && object.boosters.length
+                    && object.boosters[0].expiration * 1000 < next.expiration) {
+                    next.expiration = object.boosters[0].expiration * 1000;
+                    next.name = object.nickname.length > maxNameLength
+                        ? `${object.nickname.substring(0, maxNameLength - 1)}...`
+                        : object.nickname;
+                    next.rank = object.place;
+                }
+                return next;
+            }, { name:'', rank: 0, expiration: Infinity });
+
+        next.row = (() => {
+            for (let row of document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row')) {
+                const rank = parseInt(row.querySelector('.data-column[column="place"]').innerHTML);
+
+                if (rank === next.rank) {
+                    return row;
+                }
             }
-            return next;
-        }, { name:'', rank: 0, expiration: Infinity });
+        })();
+
+        return next;
     }
 
     function createBoosterCountdown() {
@@ -262,6 +274,10 @@
         div2.appendChild(p);
         p.innerHTML = `Boosters expire<br>${next.name} (${next.rank})<br>`;
         p.style.textAlign = 'center';
+        p.onclick = () => {
+            // click on text will select the opponent row
+            next.row.click();
+        }
 
         let span = document.createElement('span');
         p.appendChild(span);
@@ -276,6 +292,11 @@
                 span.innerHTML = "EXPIRED";
                 if (CONFIG.boosterTimer.sound) {
                     playUnboostSound();
+                    p.onclick = () => {
+                        // after the boosters expire a click will also reload the league
+                        next.row.click();
+                        window.location.reload();
+                    }
                 }
             } else {
                 span.innerHTML = `${FORMAT.time(timeLeft)}`;
