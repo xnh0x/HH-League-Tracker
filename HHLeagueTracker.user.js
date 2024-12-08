@@ -46,9 +46,6 @@
 
     const FORMAT = getFormatters();
 
-    // for object comparison
-    const isEqual = (await import('https://esm.sh/lodash/isEqual')).default;
-
     // GitHub API
     const { Octokit } = await import('https://esm.sh/@octokit/rest');
     let OCTOKIT;
@@ -862,7 +859,7 @@
         const github = await readFromGithub();
         // merge local storage data into the data from GitHub to not lose data if sync was previously off or
         // temporarily unavailable
-        if (!isEqual(localData, github.data)) {
+        if (JSON.stringify(localData) !== JSON.stringify(github.data)) {
             for (const [id, local] of Object.entries(localData)) {
                 if (!github.data[id]
                     || github.data[id].totalLostPoints < local.totalLostPoints // lost points are more accurate
