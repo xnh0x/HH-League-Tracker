@@ -45,10 +45,6 @@
     addCSS();
 
     const FORMAT = getFormatters();
-
-    // GitHub API
-    const { Octokit } = await import('https://esm.sh/@octokit/rest');
-    let OCTOKIT;
     let GITHUB_PARAMS = {};
 
     const LOCAL_STORAGE_KEYS = {
@@ -91,9 +87,7 @@
             const LEAGUE_ID = opponents_list.reduce((a,b) => a.player.id_fighter < b.player.id_fighter ? a : b).player.id_fighter;
             const WEEK = getWeekName(LEAGUE_END_TS);
             GITHUB_PARAMS.path = `${PLATFORM}/${WEEK}/${LEAGUE_ID}_scores.json`;
-            OCTOKIT = new Octokit({
-                auth: GITHUB_PARAMS.token,
-            });
+            GITHUB_PARAMS.url = `https://api.github.com/repos/${GITHUB_PARAMS.owner}/${GITHUB_PARAMS.repo}/contents/${GITHUB_PARAMS.path}`;
         }
     }
 
@@ -876,18 +870,18 @@
 
     async function readFromGithub() {
         info(`reading ${GITHUB_PARAMS.path}`);
-        const params = {
-            owner: GITHUB_PARAMS.owner,
-            repo: GITHUB_PARAMS.repo,
-            path: GITHUB_PARAMS.path,
+        const response = await fetch(GITHUB_PARAMS.url, {
+            method: 'GET',
             headers: {
+                'Accept': 'application/vnd.github+json',
+                'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
                 'If-None-Match': '' // workaround for avoiding cached data
-            },
-        }
-        const response = await OCTOKIT.rest.repos.getContent(params);
+            }
+        });
+        const data = await response.json();
         return {
-            data: JSON.parse(atob(response.data.content)), // file content needs to be decoded from base64
-            sha: response.data.sha, // required to write an update later
+            data: JSON.parse(atob(data.content)), // file content needs to be decoded from base64
+            sha: data.sha, // required to write an update later
         };
     }
 
@@ -910,17 +904,21 @@
     }
 
     async function writeToGithub(content, message, sha = null) {
-        let params = {
-            owner: GITHUB_PARAMS.owner,
-            repo: GITHUB_PARAMS.repo,
-            path: GITHUB_PARAMS.path,
+        let data = {
             message: message,
             content: content,
         }
         if (sha) {
-            params.sha = sha // to write an update sha is required
+            data.sha = sha // to write an update sha is required
         }
-        OCTOKIT.rest.repos.createOrUpdateFileContents(params);
+        await fetch(GITHUB_PARAMS.url, {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/vnd.github+json',
+                'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
+            },
+            body: JSON.stringify(data),
+        });
     }
 
     function getHHPlusPlusConfig() {
