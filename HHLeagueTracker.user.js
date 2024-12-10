@@ -474,7 +474,7 @@
                     const percentage = value > 0 ? (100 * statDiff) / value : 0;
                     const lastPercentage = oldValue > 0 ? (100 * lastDiff) / oldValue : 0;
 
-                    if (Math.abs(statDiff) > 100) { // ignore changes < 100
+                    if (oldValue && Math.abs(statDiff) > 100) { // ignore changes < 100
                         lastDiff = statDiff;
                         lastChangeTime = PAGE_LOAD_TS;
                         statChanges.tooltip = `Last Stat Diff: ${FORMAT.statDiff(statDiff)} (${FORMAT.statPercent(percentage)}%)`;
