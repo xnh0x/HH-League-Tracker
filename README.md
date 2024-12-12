@@ -29,10 +29,10 @@ Adds icons for the active skill to the team column. Optionally colors the player
 
 ![Skill_Icons](https://github.com/user-attachments/assets/e1b10349-4d2f-4b60-81c6-23e21e0afb70)
 
-### Used Teams (requires HH++ BDSM)
-Keeps a list of teams the opponents have used this week.
+### Team Tracking (requires HH++ BDSM)
+Keeps a list of teams the opponents have used this week and shows changes in team power.
 
-![Used_teams](https://github.com/user-attachments/assets/8cab496d-5dce-4631-bcb2-94074cb69d89)
+![Team_Tracking](https://github.com/user-attachments/assets/3ea2e605-e69a-4916-82bd-894227f3ec7a)
 
 ### Average (requires HH++ BDSM)
 Adds a column that shows the current average score per fight based on the amount of recorded lost points. 
