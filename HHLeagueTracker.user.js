@@ -511,7 +511,7 @@
                     let statChanges = OPPONENT_DETAILS_BY_ID[id].HHLT.stats[stat];
 
                     if (statChanges.conditions.neverChanged) {
-                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since league start');
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since<br>league start');
                     } else {
                         const timeDiff = Date.now() - statChanges.lastChangeTime;
 
@@ -639,7 +639,7 @@
                     powerChange.conditions.addTime = true;
                     text2.innerHTML = `Last Power Diff:<br>${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)`;
                 } else {
-                    text2.innerHTML = 'No change since league start';
+                    text2.innerHTML = 'No power change<br>since league start';
                 }
                 powerChange.conditions.positiveDiff = lastDiff > 0;
                 powerChange.lastChangeTime = lastChangeTime;
