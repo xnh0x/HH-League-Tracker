@@ -110,6 +110,7 @@
 
     async function leagueTracker(firstRun) {
         let localStorageData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.data)) || {};
+        let opponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
 
         let opponentData = {};
         if (CONFIG.githubStorage.enabled) {
@@ -154,7 +155,7 @@
             createBoosterCountdown();
         }
 
-        calculateChanges(opponentData);
+        calculateChanges(opponentData, opponentStats);
         writeTable();
 
         // redo changes after sorting the table
@@ -170,6 +171,7 @@
         }
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
         if (CONFIG.githubStorage.enabled) {
             if (GITHUB_PARAMS.needsUpdate) {
                 await commitUpdate(opponentData);
@@ -295,13 +297,13 @@
         }, 1000);
     }
 
-    function calculateChanges(opponentData) {
+    function calculateChanges(opponentData, opponentStats) {
         updateScores(opponentData);
 
-        updateStats();
+        updateStats(opponentStats);
 
         if (CONFIG.usedTeams.enabled) {
-            updateUsedTeams(opponentData);
+            updateUsedTeams(opponentData, opponentStats);
         }
     }
 
@@ -448,9 +450,7 @@
         );
     }
 
-    function updateStats() {
-        let opponentStats = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.stats)) || {};
-
+    function updateStats(opponentStats) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
@@ -493,8 +493,6 @@
                 OPPONENT_DETAILS_BY_ID[id].HHLT.stats = allStatChanges;
             }
         );
-
-        localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
     }
 
     function writeStats() {
@@ -517,13 +515,13 @@
                     } else {
                         const timeDiff = Date.now() - statChanges.lastChangeTime;
 
-                        const statColor = (timeDiff < 60 * 1000)
-                            ? (statChanges.conditions.positiveDiff ? "#ec0039" : "#32bc4f")
-                            : (statChanges.conditions.positiveDiff ? "#ff8aa6" : "#a4e7b2"); // lighter highlight color for changes older than 1 minute
+                        const statColor = getStatColor(timeDiff, statChanges.conditions.positiveDiff);
                         if (timeDiff < 10 * 60 * 1000) { // only highlight changes in the last 10 minutes
                             opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
                         }
-                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', statChanges.tooltip + `<br>${FORMAT.time(timeDiff)} ago`);
+                        opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
+                            statChanges.tooltip
+                            + `<br>${FORMAT.time(timeDiff)} ago`);
                     }
                 }
             }
@@ -567,50 +565,93 @@
         team_icons.appendChild(getSkillIcon(type, {tooltip}));
     }
 
-    function updateUsedTeams(opponentData) {
+    function updateUsedTeams(opponentData, opponentStats) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                // no need to collect your own teams
-                if (id === MY_ID) { return; }
-
-                let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
-                const opponentTeam = OPPONENT_DETAILS_BY_ID[id].player.team;
-                let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
-                    ? getSkillByElement(opponentTeam.girls[0].girl.element).type
-                    : null;
-
-                const currentTeam = JSON.stringify({theme: opponentTeam.theme, type: type});
-                if (!teamsSet.has(currentTeam)) {
-                    teamsSet.add(currentTeam);
-                    GITHUB_PARAMS.needsUpdate = true;
-                }
-                const teams = Array.from(teamsSet).sort();
-                opponentData[id].teams = teams;
-
+                const opponent = OPPONENT_DETAILS_BY_ID[id];
                 let tooltip = document.createElement('div');
-                tooltip.innerText = 'Used Teams:';
-                teams.forEach((t) => {
-                    let team = JSON.parse(t);
-                    let div = document.createElement('div');
-                    team.theme.split(',').forEach((element) => {
-                        let elementIcon = getElementIcon(element,
-                            {style: 'height: 16px; width: 16px;',});
-                        div.appendChild(elementIcon);
-                    });
-                    if (div.childElementCount === 2) {
-                        // overlap dual elements
-                        div.firstElementChild.style.marginRight = '-7px';
+
+                // no need to collect your own teams
+                if (id !== MY_ID) {
+                    let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
+                    const opponentTeam = opponent.player.team;
+
+                    let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
+                        ? getSkillByElement(opponentTeam.girls[0].girl.element).type
+                        : null;
+                    const currentTeam = JSON.stringify({theme: opponentTeam.theme, type: type});
+                    if (!teamsSet.has(currentTeam)) {
+                        teamsSet.add(currentTeam);
+                        GITHUB_PARAMS.needsUpdate = true;
                     }
-                    if (team.type && team.type !== 'none') {
-                        let skillIcon = getSkillIcon(team.type,
-                            {style: 'height: 16px; width: 16px;',});
-                        div.appendChild(skillIcon);
-                    }
-                    tooltip.appendChild(div);
-                })
-                OPPONENT_DETAILS_BY_ID[id].HHLT.teams = { tooltip: tooltip.innerHTML };
+                    const teams = Array.from(teamsSet).sort();
+
+                    opponentData[id].teams = teams;
+                    let text1 = document.createElement('p');
+                    text1.innerText = 'Used Teams:';
+                    tooltip.appendChild(text1);
+
+                    let table = document.createElement('div');
+                    tooltip.appendChild(table);
+                    table.style.display = 'grid';
+                    table.style.justifyContent = 'center';
+                    table.style.gridTemplateColumns = `repeat(${Math.ceil(Math.sqrt(teams.length))}, 50px)`;
+                    teams.forEach((teamJson) => {
+                        let team = JSON.parse(teamJson);
+                        let div = document.createElement('div');
+                        team.theme.split(',').forEach((element) => {
+                            let elementIcon = getElementIcon(element,
+                                {style: 'height: 16px; width: 16px;',});
+                            div.appendChild(elementIcon);
+                        });
+                        if (div.childElementCount === 2) {
+                            // overlap dual elements
+                            div.firstElementChild.style.marginRight = '-7px';
+                        }
+                        if (team.type && team.type !== 'none') {
+                            let skillIcon = getSkillIcon(team.type,
+                                {style: 'height: 16px; width: 16px;',});
+                            div.appendChild(skillIcon);
+                        }
+                        table.appendChild(div)
+                    })
+                }
+                let powerChange = { conditions: {} };
+                const teamPower = opponent.team;
+                const oldTeamPower = opponentStats[id]['power']?.teamPower || 0;
+                let lastDiff = opponentStats[id]['power']?.lastDiff || 0;
+                let lastChangeTime = opponentStats[id]['power']?.lastChangeTime || 0;
+
+                const statDiff = teamPower - oldTeamPower;
+                const percentage = teamPower > 0 ? (100 * statDiff) / teamPower : 0;
+                const lastPercentage = oldTeamPower > 0 ? (100 * lastDiff) / oldTeamPower : 0;
+
+                let text2 = document.createElement('p');
+                tooltip.appendChild(text2);
+                if (oldTeamPower && statDiff) {
+                    lastDiff = statDiff;
+                    lastChangeTime = PAGE_LOAD_TS;
+                    powerChange.conditions.addTime = true;
+                    text2.innerHTML = `Last Power Diff:<br> ${FORMAT.statDiff(statDiff)} (${FORMAT.statPercent(percentage)}%)`;
+                } else if (lastChangeTime > 0) {
+                    powerChange.conditions.addTime = true;
+                    text2.innerHTML = `Last Power Diff:<br>${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)`;
+                } else {
+                    text2.innerHTML = 'No change since league start';
+                }
+                powerChange.conditions.positiveDiff = lastDiff > 0;
+                powerChange.lastChangeTime = lastChangeTime;
+
+                // XXX apparently the equipment is always correct for the player and always wrong for the opponents
+                // regardless if the bug is active or not so this doesn't work to detect the bug
+
+                // const girl1ArmorString = JSON.stringify(opponent.player.team.girls[0].armor);
+                // powerChange.conditions.eqBug = opponent.player.team.girls.reduce((bugged, girl) => { return bugged && JSON.stringify(girl.armor) === girl1ArmorString }, true);
+
+                opponentStats[id]['power'] = {teamPower, lastDiff, lastChangeTime};
+                opponent.HHLT.teams = { tooltip: tooltip.innerHTML, powerChange};
             }
         );
     }
@@ -620,11 +661,29 @@
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                // no data is kept for yourself
-                if (id === MY_ID) { return; }
+                let teamPower = opponentRow.querySelector('.data-column[column="team"]').lastElementChild;
 
-                // add tooltip to the team power element
-                opponentRow.querySelector('.data-column[column="team"]').lastElementChild.setAttribute('tooltip', OPPONENT_DETAILS_BY_ID[id].HHLT.teams.tooltip);
+                const opponent = OPPONENT_DETAILS_BY_ID[id];
+                const powerChange = opponent.HHLT.teams.powerChange;
+                const timeDiff = Date.now() - powerChange.lastChangeTime;
+
+                let tooltip = opponent.HHLT.teams.tooltip;
+                if (powerChange.conditions.addTime) {
+                    tooltip += `${FORMAT.time(timeDiff)} ago`;
+                }
+                if (powerChange.conditions.eqBug) { // always false since the detection doesn't work
+                    tooltip += `<br>Equipment Bugged!`;
+                    // this gives the team power a negative look
+                    teamPower.style.color = `#000`;
+                    const outlineColor = (timeDiff > 10 * 60 * 1000)
+                        ? '#ffffff'
+                        : getStatColor(timeDiff, powerChange.conditions.positiveDiff);
+                    teamPower.style.textShadow = `1px 1px 0px ${outlineColor}, -1px 1px 0px ${outlineColor}, -1px -1px 0px ${outlineColor}, 1px -1px 0px ${outlineColor}`;
+                } else if (timeDiff < 10 * 60 * 1000) {
+                    const statColor = getStatColor(timeDiff, powerChange.conditions.positiveDiff);
+                    teamPower.setAttribute('style', `color: ${statColor}`);
+                }
+                teamPower.setAttribute('tooltip', tooltip);
             }
         );
     }
@@ -686,7 +745,7 @@
                 avatar.style.position = 'relative';
                 let lvl = document.createElement('div');
                 lvl.innerHTML = OPPONENT_DETAILS_BY_ID[id].level;
-                lvl.setAttribute('style', ` width: 100%; position: absolute; bottom: -0.2rem; text-align: center; font-size: 0.66rem`);
+                lvl.setAttribute('style', `width: 100%; position: absolute; bottom: -0.2rem; text-align: center; font-size: 0.66rem`);
                 avatar.appendChild(lvl);
             }
         );
@@ -718,6 +777,12 @@
         } else {
             return "#676767"; // grey
         }
+    }
+
+    function getStatColor(time, positive) {
+        return (time < 60 * 1000)
+            ? (positive ? "#ec0039" : "#32bc4f")
+            : (positive ? "#ff8aa6" : "#a4e7b2"); // lighter highlight color for changes older than 1 minute
     }
 
     function getSkillByElement(element, ocd = false) {
@@ -1088,7 +1153,7 @@
             group: 'LeagueTracker',
             configSchema: {
                 baseKey: 'usedTeams',
-                label: 'Keep a list of used teams for your opponents (tooltip on team power)',
+                label: 'Track used teams and display team power changes',
                 default: false,
             },
             run() {
