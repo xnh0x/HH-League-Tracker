@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.9
+// @version      1.9.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -118,8 +118,8 @@
                 const {data, sha} = await mergeLocalAndGithubData(localStorageData);
                 opponentData = data;
                 GITHUB_PARAMS.sha = sha;
-            } catch (e) {
-                if (firstRun && e.status === 404) {
+            } catch (status) {
+                if (firstRun && status === 404) {
                     info(`${GITHUB_PARAMS.path} doesn't exist yet`)
                     try {
                         await commitNewFile();
@@ -129,7 +129,7 @@
                     info('restart script');
                     setTimeout(leagueTracker, 500, false);
                     return;
-                } else if (e.status === 401) {
+                } else if (status === 401) {
                     info('check github config, token not valid for repo, using localStorage')
                 } else {
                     info('couldn\'t read data from github, using localStorage');
@@ -943,6 +943,9 @@
                 'If-None-Match': '' // workaround for avoiding cached data
             }
         });
+        if (response.status !== 200) {
+            throw response.status;
+        }
         const data = await response.json();
         return {
             data: JSON.parse(atob(data.content)), // file content needs to be decoded from base64
