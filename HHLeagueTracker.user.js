@@ -161,15 +161,6 @@
         // redo changes after sorting the table
         $(document).on('league:table-sorted', () => { writeTable(); })
 
-        if (CONFIG.hideLevel.move) {
-            // swap lvl and name header to have lvl above the avatar
-            let headers = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
-            let lvl = headers.querySelector('.data-column[column="level"]')
-            let name = headers.querySelector('.data-column[column="nickname"]')
-            headers.removeChild(lvl);
-            name.before(lvl);
-        }
-
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
         if (CONFIG.githubStorage.enabled) {
@@ -310,6 +301,15 @@
     function writeTable() {
         if (CONFIG.hideLevel.move) {
             addLevelToAvatar();
+            if (!CONFIG.hideLevel.moveDone) {
+                // swap lvl and name header to have lvl above the avatar
+                let headers = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
+                let lvl = headers.querySelector('.data-column[column="level"]')
+                let name = headers.querySelector('.data-column[column="nickname"]')
+                headers.removeChild(lvl);
+                name.before(lvl);
+                CONFIG.hideLevel.moveDone = true;
+            }
         }
 
         writeScores();
