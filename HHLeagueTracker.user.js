@@ -106,7 +106,13 @@
     }
 
     GITHUB_PARAMS.needsUpdate = false;
-    await leagueTracker(true);
+    const observer = new MutationObserver(async () => {
+        if (document.querySelectorAll('#leagues .league_table').length) {
+            observer.disconnect();
+            await leagueTracker(true);
+        }
+    })
+    observer.observe(document.querySelector('#leagues'), {childList: true, subtree: true});
 
     async function leagueTracker(firstRun) {
         let localStorageData = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.data)) || {};
