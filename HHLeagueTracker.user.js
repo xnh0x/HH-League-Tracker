@@ -165,7 +165,8 @@
         writeTable();
 
         // redo changes after sorting the table
-        $(document).on('league:table-sorted', () => { writeTable(); })
+        const sortingObserver = new MutationObserver(() => { writeTable(); })
+        sortingObserver.observe(document.querySelector('.league_table .data-list'), {childList: true})
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
