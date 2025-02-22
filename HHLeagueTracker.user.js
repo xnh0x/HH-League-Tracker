@@ -334,6 +334,10 @@
         }
 
         writeStats();
+
+        if (CONFIG.challenges.enabled) {
+            lostPointsOnChallenges();
+        }
     }
 
     function updateScores(opponentData) {
@@ -758,6 +762,34 @@
         );
     }
 
+    function lostPointsOnChallenges() {
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                opponentRow.querySelectorAll('#leagues .league_table .data-list .data-row.body-row .data-column[column="match_history_sorting"] .result').forEach(
+                    result => {
+                        const p = Number(result.innerHTML);
+                        if (!p) { return; }
+
+                        // don't show 25s
+                        if (p === 25) {
+                            result.innerHTML = CONFIG.challenges.twentyFive;
+                            return;
+                        }
+
+                        // write lost points
+                        result.innerHTML = (p - 25).toString();
+
+                        if (CONFIG.challenges.allRed) {
+                            // color every point loss red
+                            result.classList.remove('won');
+                            result.classList.add('lost');
+                        }
+                    }
+                )
+            }
+        );
+    }
+
     function getScoreColor(lostPoints) {
         if (lostPoints <= 25) {
             return "#ec0039"; // mythic
@@ -1022,6 +1054,8 @@
                 { enabled: true },
             boosterTimer:
                 { enabled: true, sound: false },
+            challenges:
+                { enabled: false, allRed: true, twentyFive: '' },
         };
 
         // changing config requires HH++
@@ -1209,6 +1243,31 @@
             },
         });
         config.boosterTimer.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'challenges',
+                label: 'Show lost points on challenges instead of the result',
+                default: false,
+                subSettings: [
+                    { key: 'allRed', default: true,
+                        label: 'Color every point loss red instead of just lost challenges',
+                    },
+                    { key: 'twentyFive', default: false,
+                        label: 'Use ★ for 25 instead of nothing',
+                    },
+                ],
+            },
+            run(subSettings) {
+                config.challenges = {
+                    enabled: true,
+                    allRed: subSettings.allRed,
+                    twentyFive: subSettings.twentyFive ? '★' : '',
+                };
+            },
+        });
+        config.challenges.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
