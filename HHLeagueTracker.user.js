@@ -429,20 +429,7 @@
                 const changes = OPPONENT_DETAILS_BY_ID[id].HHLT.score;
 
                 if (CONFIG.scoreColor.enabled) {
-                    if (CONFIG.scoreColor.rank) {
-                        opponentRow.querySelector('.data-column[column="place"]').style.color = changes.color;
-                    }
-                    if (CONFIG.scoreColor.name) {
-                        // remove clubmate class from League++ so clubmates get colored correctly too
-                        opponentRow.querySelector('.data-column[column="nickname"]').classList.remove("clubmate");
-                        opponentRow.querySelector('.data-column[column="nickname"]').style.color = changes.color;
-                    }
-                    if (CONFIG.scoreColor.level) {
-                        opponentRow.querySelector('.data-column[column="level"]').style.color = changes.color;
-                    }
-                    if (CONFIG.scoreColor.points) {
-                        opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = changes.color;
-                    }
+                    opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = changes.color;
                 }
 
                 if (changes.conditions.update) {
@@ -1041,7 +1028,7 @@
             githubStorage:
                 { enabled: true },
             scoreColor:
-                { enabled: true, rank: false, name: false, level: false, points: true },
+                { enabled: true },
             activeSkill:
                 { enabled: false, noIcon: false, ocd: false },
             usedTeams:
@@ -1088,26 +1075,16 @@
             group: 'LeagueTracker',
             configSchema: {
                 baseKey: 'scoreColor',
-                label: `Color players based on the amount of lost points<br>`
+                label: `Color scores based on the amount of lost points<br>`
                     + ` <span style="color: ${getScoreColor(25)}">&le;25</span>`
                     + ` <span style="color: ${getScoreColor(50)}">&le;50</span>`
                     + ` <span style="color: ${getScoreColor(100)}">&le;100</span>`
                     + ` <span style="color: ${getScoreColor(200)}">&le;200</span>`,
                 default: true,
-                subSettings: [
-                    { key: 'rank', default: false, label: 'Rank' },
-                    { key: 'name', default: false, label: 'Name' },
-                    { key: 'level', default: false, label: 'Level' },
-                    { key: 'points', default: true, label: 'Points' },
-                ],
             },
-            run(subSettings) {
+            run() {
                 config.scoreColor = {
                     enabled: true,
-                    rank: subSettings.rank,
-                    name: subSettings.name,
-                    level: subSettings.level,
-                    points: subSettings.points,
                 };
             },
         });
@@ -1142,7 +1119,6 @@
                     noIcon: subSettings.noIcon || subSettings.ocd,
                     ocd: subSettings.ocd,
                 };
-                config.scoreColor.name &= !subSettings.noIcon;
             },
         });
         config.activeSkill.enabled = false;
