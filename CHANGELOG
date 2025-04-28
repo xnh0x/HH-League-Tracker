@@ -1,3 +1,5 @@
+1.11 : remove sub settings for coloring
+       add indicator for stale blessings
 1.10 : new option lost points on challenges
 1.9  : include team power changes into team tracking
 1.8  : remove external modules
