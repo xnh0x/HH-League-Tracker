@@ -300,9 +300,7 @@
 
         updateStats(opponentStats);
 
-        if (CONFIG.usedTeams.enabled) {
-            updateUsedTeams(opponentData, opponentStats);
-        }
+        updateTeams(opponentData, opponentStats);
     }
 
     function writeTable() {
@@ -329,9 +327,7 @@
             markActiveSkill();
         }
 
-        if (CONFIG.usedTeams.enabled) {
-            writeTeams();
-        }
+        writeTeams();
 
         writeStats();
 
@@ -563,18 +559,18 @@
         team_icons.appendChild(getSkillIcon(type, {tooltip}));
     }
 
-    function updateUsedTeams(opponentData, opponentStats) {
+    function updateTeams(opponentData, opponentStats) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
                 const opponent = OPPONENT_DETAILS_BY_ID[id];
+                const opponentTeam = opponent.player.team;
                 let tooltip = document.createElement('div');
 
                 // no need to collect your own teams
-                if (id !== MY_ID) {
+                if (CONFIG.usedTeams.enabled && id !== MY_ID) {
                     let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
-                    const opponentTeam = opponent.player.team;
 
                     let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
                         ? getSkillByElement(opponentTeam.girls[0].girl.element).type
@@ -617,7 +613,7 @@
                     })
                 }
                 let powerChange = { conditions: {} };
-                const teamPower = opponent.team;
+                const teamPower = opponentTeam.total_power;
                 const oldTeamPower = opponentStats[id]['power']?.teamPower || 0;
                 let lastDiff = opponentStats[id]['power']?.lastDiff || 0;
                 let lastChangeTime = opponentStats[id]['power']?.lastChangeTime || 0;
@@ -648,6 +644,18 @@
                 // const girl1ArmorString = JSON.stringify(opponent.player.team.girls[0].armor);
                 // powerChange.conditions.eqBug = opponent.player.team.girls.reduce((bugged, girl) => { return bugged && JSON.stringify(girl.armor) === girl1ArmorString }, true);
 
+                let staleBlessings = false;
+                opponent.player.team.girls.forEach((girl) => {
+                    if (girl.can_be_blessed) {
+                        const expectedBlessedCarac1 = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
+                            (carac, bonus) => { return carac * (1 + bonus/100)}, girl.caracs.carac1);
+                        staleBlessings |= Math.abs(expectedBlessedCarac1 - girl.blessed_caracs.carac1) > 1;
+                    } else {
+                        staleBlessings |= girl.caracs.carac1 != girl.blessed_caracs.carac1;
+                    }
+                })
+
+                powerChange.conditions.staleBlessings = staleBlessings;
                 opponentStats[id]['power'] = {teamPower, lastDiff, lastChangeTime};
                 opponent.HHLT.teams = { tooltip: tooltip.innerHTML, powerChange};
             }
@@ -669,14 +677,14 @@
                 if (powerChange.conditions.addTime) {
                     tooltip += `${FORMAT.time(timeDiff)} ago`;
                 }
-                if (powerChange.conditions.eqBug) { // always false since the detection doesn't work
-                    tooltip += `<br>Equipment Bugged!`;
+                if (powerChange.conditions.staleBlessings) {
+                    tooltip += `<br>Old blessings are still active!`;
                     // this gives the team power a negative look
                     teamPower.style.color = `#000`;
                     const outlineColor = (timeDiff > 10 * 60 * 1000)
-                        ? '#ffffff'
+                        ? (id == MY_ID ? '#2296e4' : '#ffffff')
                         : getStatColor(timeDiff, powerChange.conditions.positiveDiff);
-                    teamPower.style.textShadow = `1px 1px 0px ${outlineColor}, -1px 1px 0px ${outlineColor}, -1px -1px 0px ${outlineColor}, 1px -1px 0px ${outlineColor}`;
+                    teamPower.style.textShadow = `1px 1px 2px ${outlineColor}, -1px 1px 2px ${outlineColor}, -1px -1px 2px ${outlineColor}, 1px -1px 2px ${outlineColor}`;
                 } else if (timeDiff < 10 * 60 * 1000) {
                     const statColor = getStatColor(timeDiff, powerChange.conditions.positiveDiff);
                     teamPower.setAttribute('style', `color: ${statColor}`);
@@ -1173,7 +1181,7 @@
             group: 'LeagueTracker',
             configSchema: {
                 baseKey: 'usedTeams',
-                label: 'Track used teams and display team power changes',
+                label: 'Track used teams',
                 default: false,
             },
             run() {
