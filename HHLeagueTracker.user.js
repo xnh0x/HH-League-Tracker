@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.11.1
+// @version      1.11.2
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -645,22 +645,28 @@
                 // powerChange.conditions.eqBug = opponent.player.team.girls.reduce((bugged, girl) => { return bugged && JSON.stringify(girl.armor) === girl1ArmorString }, true);
 
                 let staleBlessingCount = 0;
-                let expectedTP = 0;
-                opponent.player.team.girls.forEach((girl) => {
-                    let correctBlessing = 1;
-                    if (girl.can_be_blessed) {
-                        correctBlessing = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
-                            (total, bonus) => { return total * (1 + bonus/100)}, 1);
-                    }
-                    const expectedCaracsSum = (girl.caracs.carac1 + girl.caracs.carac2 + girl.caracs.carac3) * correctBlessing;
-                    expectedTP += expectedCaracsSum;
-                    if (Math.abs(expectedCaracsSum - girl.caracs_sum) > 1) {
-                        staleBlessingCount++;
-                    }
-                })
+                // stale blessings last for about an hour at most so limit the check to
+                // shorty after blessing change since it's pointless otherwise
+                if (259200 > window.season_end_at && window.season_end_at > 255000) {
+                    let expectedTP = 0;
+                    opponent.player.team.girls.forEach((girl) => {
+                        let correctBlessing = 1;
+                        if (girl.can_be_blessed) {
+                            correctBlessing = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
+                                (total, bonus) => {
+                                    return total * (1 + bonus / 100)
+                                }, 1);
+                        }
+                        const expectedCaracsSum = (girl.caracs.carac1 + girl.caracs.carac2 + girl.caracs.carac3) * correctBlessing;
+                        expectedTP += expectedCaracsSum;
+                        if (Math.abs(expectedCaracsSum - girl.caracs_sum) > 1) {
+                            staleBlessingCount++;
+                        }
+                    })
+                    powerChange.expectedPowerDiff = expectedTP - teamPower;
+                }
 
                 powerChange.staleBlessingCount = staleBlessingCount;
-                powerChange.expectedPowerDiff = expectedTP - teamPower;
                 opponentStats[id]['power'] = {teamPower, lastDiff, lastChangeTime};
                 opponent.HHLT.teams = { tooltip: tooltip.innerHTML, powerChange};
             }
