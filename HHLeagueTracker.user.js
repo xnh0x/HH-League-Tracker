@@ -631,7 +631,7 @@
                     text2.innerHTML = `Last Power Diff:<br> ${FORMAT.statDiff(statDiff)} (${FORMAT.statPercent(percentage)}%)`;
                 } else if (lastChangeTime > 0) {
                     powerChange.conditions.addTime = true;
-                    text2.innerHTML = `Last Power Diff:<br>${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)`;
+                    text2.innerHTML = `Last Power Diff:<br> ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)`;
                 } else {
                     text2.innerHTML = 'No power change<br>since league start';
                 }
@@ -644,18 +644,23 @@
                 // const girl1ArmorString = JSON.stringify(opponent.player.team.girls[0].armor);
                 // powerChange.conditions.eqBug = opponent.player.team.girls.reduce((bugged, girl) => { return bugged && JSON.stringify(girl.armor) === girl1ArmorString }, true);
 
-                let staleBlessings = false;
+                let staleBlessingCount = 0;
+                let expectedTP = 0;
                 opponent.player.team.girls.forEach((girl) => {
+                    let correctBlessing = 1;
                     if (girl.can_be_blessed) {
-                        const expectedBlessedCarac1 = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
-                            (carac, bonus) => { return carac * (1 + bonus/100)}, girl.caracs.carac1);
-                        staleBlessings |= Math.abs(expectedBlessedCarac1 - girl.blessed_caracs.carac1) > 1;
-                    } else {
-                        staleBlessings |= girl.caracs.carac1 != girl.blessed_caracs.carac1;
+                        correctBlessing = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
+                            (total, bonus) => { return total * (1 + bonus/100)}, 1);
+                    }
+                    const expectedCaracsSum = (girl.caracs.carac1 + girl.caracs.carac2 + girl.caracs.carac3) * correctBlessing;
+                    expectedTP += expectedCaracsSum;
+                    if (Math.abs(expectedCaracsSum - girl.caracs_sum) > 1) {
+                        staleBlessingCount++;
                     }
                 })
 
-                powerChange.conditions.staleBlessings = staleBlessings;
+                powerChange.staleBlessingCount = staleBlessingCount;
+                powerChange.expectedPowerDiff = expectedTP - teamPower;
                 opponentStats[id]['power'] = {teamPower, lastDiff, lastChangeTime};
                 opponent.HHLT.teams = { tooltip: tooltip.innerHTML, powerChange};
             }
@@ -677,13 +682,13 @@
                 if (powerChange.conditions.addTime) {
                     tooltip += `${FORMAT.time(timeDiff)} ago`;
                 }
-                if (powerChange.conditions.staleBlessings) {
-                    tooltip += `<br>Old blessings are still active!`;
+                if (powerChange.staleBlessingCount > 0) {
+                    tooltip += `<br>${powerChange.staleBlessingCount} girl${powerChange.staleBlessingCount > 1 ? 's' : ''} with old blessings!`
+                             + `<br>Expected change: ${FORMAT.statDiff(powerChange.expectedPowerDiff)}`;
                     // this gives the team power a negative look
                     teamPower.style.color = `#000`;
-                    const outlineColor = (timeDiff > 10 * 60 * 1000)
-                        ? (id == MY_ID ? '#2296e4' : '#ffffff')
-                        : getStatColor(timeDiff, powerChange.conditions.positiveDiff);
+                    const outlineColor = (powerChange.expectedPowerDiff < 0)
+                        ? '#ffffff' : '#ffb244';
                     teamPower.style.textShadow = `1px 1px 2px ${outlineColor}, -1px 1px 2px ${outlineColor}, -1px -1px 2px ${outlineColor}, 1px -1px 2px ${outlineColor}`;
                 } else if (timeDiff < 10 * 60 * 1000) {
                     const statColor = getStatColor(timeDiff, powerChange.conditions.positiveDiff);
