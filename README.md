@@ -34,6 +34,10 @@ Keeps a list of teams the opponents have used this week and shows changes in tea
 
 ![Team_Tracking](https://github.com/user-attachments/assets/3ea2e605-e69a-4916-82bd-894227f3ec7a)
 
+Stats aren't immediately updated after the blessings change on monday. Teams with girls that still have last week's blessed stats will be highlighted with a black team power and an orange or white shadow depending on whether the power will increase or decrease once the new blessings become active.
+
+![Blessing Change](https://github.com/user-attachments/assets/9fd0a1fb-ba2a-4910-8895-5f5fa57aa858)
+
 ### Average (requires HH++ BDSM)
 Adds a column that shows the current average score per fight based on the amount of recorded lost points. 
 
