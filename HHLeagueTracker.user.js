@@ -527,8 +527,13 @@
             opponentRow => {
                 const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
 
-                const center = OPPONENT_DETAILS_BY_ID[id].player.team.girls[0];
+                const teamIcons = opponentRow.querySelector('.data-column[column="team"]').firstElementChild
+                if (teamIcons.childElementCount === 2) {
+                    // this will overlap the two theme elements
+                    teamIcons.lastElementChild.style.marginLeft = '-0.66rem';
+                }
 
+                const center = OPPONENT_DETAILS_BY_ID[id].player.team.girls[0];
                 if (center.skill_tiers_info['5']?.skill_points_used) {
                     const {type, id, color} = getSkillByElement(center.girl.element, CONFIG.activeSkill.ocd);
 
@@ -536,7 +541,7 @@
                         applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
                     } else {
                         const tooltip = `${type} ${center.skills[id].skill.display_value_text}`;
-                        addSkillIcon(opponentRow.querySelector('.data-column[column="team"]').firstElementChild, type, tooltip);
+                        addSkillIcon(teamIcons, type, tooltip);
                     }
                 }
             }
@@ -549,14 +554,10 @@
         nickname.style.color = color;
     }
 
-    function addSkillIcon(team_icons, type, tooltip) {
-        // move the icons a little closer together
-        team_icons.lastElementChild.style.marginRight = '-0.15rem';
-        if (team_icons.childElementCount === 2) {
-            // this will overlap the two theme elements to save space
-            team_icons.lastElementChild.style.marginLeft = '-0.66rem';
-        }
-        team_icons.appendChild(getSkillIcon(type, {tooltip}));
+    function addSkillIcon(teamIcons, type, tooltip) {
+        // move the icon a little closer together
+        teamIcons.lastElementChild.style.marginRight = '-0.15rem';
+        teamIcons.appendChild(getSkillIcon(type, {tooltip}));
     }
 
     function updateTeams(opponentData, opponentStats) {
