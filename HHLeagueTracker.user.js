@@ -393,6 +393,13 @@
                     changes.averageColor = getAverageColor(finalAverage);
                     changes.color = getScoreColor(finalLostPoints);
                     changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-finalLostPoints || 0)}` // this avoids -0, signDisplay 'negative' isn't supported by old firefox versions
+                    if (opponentData[id].lastChangeTime) {
+                        changes.tooltip = `Recorded Lost Points: ${totalLostPoints}` +
+                            `<br>Last Score Diff: ${opponentData[id].lastDiff}` +
+                            `<br>Last Lost Points: ${opponentData[id].lastLostPoints}`;
+                        changes.conditions.addChangeTime = true;
+                        changes.lastChangeTime = opponentData[id].lastChangeTime;
+                    }
                 } else if (gainedScore > 0) {
                     changes.conditions.update = true;
                     // write score change and newly lost points
