@@ -150,7 +150,7 @@
         // add nickname to make browsing the json a little more convenient
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 if (!opponentData[id]) { opponentData[id] = {}; }
                 opponentData[id].nickname = encodeURI(OPPONENT_DETAILS_BY_ID[id].nickname);
@@ -212,6 +212,10 @@
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
         ].join(' ');
         document.head.appendChild(sheet);
+    }
+
+    function getIdFromRow(row) {
+        return parseInt(row.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
     }
 
     function getNextBoosterExpiration() {
@@ -339,7 +343,7 @@
     function updateScores(opponentData) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 const score = OPPONENT_DETAILS_BY_ID[id].player_league_points;
                 const oldScore = opponentData[id].score || 0;
@@ -427,7 +431,7 @@
     function writeScores() {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 const changes = OPPONENT_DETAILS_BY_ID[id].HHLT.score;
 
@@ -454,7 +458,7 @@
     function updateStats(opponentStats) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 if (!opponentStats[id]) { opponentStats[id] = {}; }
 
@@ -499,7 +503,7 @@
     function writeStats() {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 const STAT_ELEMENT_MAP = {
                     'damage': {'div': '#player_attack_stat', 'span': '#stats-damage'},
@@ -532,7 +536,7 @@
     function markActiveSkill() {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 const teamIcons = opponentRow.querySelector('.data-column[column="team"]').firstElementChild
                 if (teamIcons.childElementCount === 2) {
@@ -570,7 +574,7 @@
     function updateTeams(opponentData, opponentStats) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 const opponent = OPPONENT_DETAILS_BY_ID[id];
                 const opponentTeam = opponent.player.team;
@@ -684,7 +688,7 @@
     function writeTeams() {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 let teamPower = opponentRow.querySelector('.data-column[column="team"]').lastElementChild;
 
@@ -736,7 +740,7 @@
 
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
                 const pointsColumn = opponentRow.querySelector('.data-column[column="player_league_points"]');
 
                 let avgColumn = document.createElement('div');
@@ -759,7 +763,7 @@
     function addLevelToAvatar() {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
-                const id = parseInt(opponentRow.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
+                const id = getIdFromRow(opponentRow);
 
                 let avatar = opponentRow.querySelector('.data-column[column="nickname"] .square-avatar-wrapper');
                 // some scripts remove the avatar
