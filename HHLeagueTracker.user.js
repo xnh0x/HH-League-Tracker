@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.11.2
+// @version      1.11.3
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -50,7 +50,8 @@
     const LOCAL_STORAGE_KEYS = {
         data: 'HHLeagueTrackerData',
         stats: 'HHLeagueTrackerStatData',
-        leagueEnd: 'HHLeagueTrackerLeagueEnd'
+        leagueEnd: 'HHLeagueTrackerLeagueEnd',
+        playerTeams: 'HHLeagueTrackerPlayerTeams'
     }
 
     const MY_ID = shared.Hero.infos.id;
@@ -98,6 +99,7 @@
         info('new league has started, deleting old data from local storage')
         localStorage.removeItem(LOCAL_STORAGE_KEYS.data);
         localStorage.removeItem(LOCAL_STORAGE_KEYS.stats);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.playerTeams);
         if (CONFIG.githubStorage.enabled) {
             await commitNewFile();
             // give GitHub a moment to process the new file
@@ -580,9 +582,11 @@
                 const opponentTeam = opponent.player.team;
                 let tooltip = document.createElement('div');
 
-                // no need to collect your own teams
-                if (CONFIG.usedTeams.enabled && id !== MY_ID) {
-                    let teamsSet = opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set();
+                // store your own teams locally
+                if (CONFIG.usedTeams.enabled) {
+                    let teamsSet = (id !== MY_ID)
+                        ? opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set()
+                        : new Set(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.playerTeams)));
 
                     let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
                         ? getSkillByElement(opponentTeam.girls[0].girl.element).type
@@ -590,11 +594,15 @@
                     const currentTeam = JSON.stringify({theme: opponentTeam.theme, type: type});
                     if (!teamsSet.has(currentTeam)) {
                         teamsSet.add(currentTeam);
-                        GITHUB_PARAMS.needsUpdate = true;
+                        if (id !== MY_ID) { GITHUB_PARAMS.needsUpdate = true; }
                     }
                     const teams = Array.from(teamsSet).sort();
 
-                    opponentData[id].teams = teams;
+                    if (id !== MY_ID) {
+                        opponentData[id].teams = teams;
+                    } else {
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.playerTeams, JSON.stringify(teams));
+                    }
                     let text1 = document.createElement('p');
                     text1.innerText = 'Used Teams:';
                     tooltip.appendChild(text1);
