@@ -51,7 +51,8 @@
         data: 'HHLeagueTrackerData',
         stats: 'HHLeagueTrackerStatData',
         leagueEnd: 'HHLeagueTrackerLeagueEnd',
-        playerTeams: 'HHLeagueTrackerPlayerTeams'
+        playerTeams: 'HHLeagueTrackerPlayerTeams',
+        opponentMarks: 'HHLeagueTrackerOpponentMarks',
     }
 
     const MY_ID = shared.Hero.infos.id;
@@ -212,6 +213,9 @@
             CONFIG.hideLevel.enabled && !CONFIG.hideLevel.move ? '.data-row.head-row .data-column[column="level"] { display: none; }' : '',
             // reduce line height to fit two lines of text in the row
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
+            // color rank number of marked opponents
+            [1,2,3,4,5].map((i) =>
+                `.LT-mark-${i} .data-column[column="place"] { color:${getMarkColor(i)} }`).join(' '),
         ].join(' ');
         document.head.appendChild(sheet);
     }
@@ -340,6 +344,8 @@
         if (CONFIG.challenges.enabled) {
             lostPointsOnChallenges();
         }
+
+        markOpponents();
     }
 
     function updateScores(opponentData) {
@@ -816,6 +822,46 @@
         );
     }
 
+    function markOpponents() {
+        const marks = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.opponentMarks)) || {};
+        $('#leagues .league_table .data-list .data-row.body-row:not(.player-row)').each(
+            (i, row) => {
+                const id = getIdFromRow(row);
+                let mark = getMark(id);
+                setClass(mark);
+
+                const $rank = $(row).find('.data-column[column="place"]');
+                $rank.on('click', () => {
+                    setClass((mark + 1) % 6);
+                });
+                $rank.on('contextmenu', (e) => {
+                    e.preventDefault();
+                    setClass(0);
+                });
+
+                function setClass(newMark) {
+                    $(row).removeClass(`LT-mark-${mark}`);
+                    mark = newMark;
+                    setMark(id, mark);
+                    $(row).addClass(`LT-mark-${mark}`);
+                }
+            }
+        );
+
+        function getMark(id) {
+            if (!marks[id]) {
+                marks[id] = 0;
+                localStorage.setItem(LOCAL_STORAGE_KEYS.opponentMarks, JSON.stringify(marks));
+            }
+            return marks[id];
+        }
+
+        function setMark(id, mark) {
+            marks[id] = mark;
+            localStorage.setItem(LOCAL_STORAGE_KEYS.opponentMarks, JSON.stringify(marks));
+        }
+    }
+
     function getScoreColor(lostPoints) {
         if (lostPoints <= 25) {
             return "#ec0039"; // mythic
@@ -826,7 +872,7 @@
         } else if (lostPoints <= 200) {
             return "#32bc4f"; // rare
         } else {
-            return "#676767"; // grey
+            return "#8d8e9f"; // common
         }
     }
 
@@ -840,7 +886,23 @@
         } else if (average >= 24) {
             return "#32bc4f"; // rare
         } else {
-            return "#676767"; // grey
+            return "#8d8e9f"; // common
+        }
+    }
+
+    function getMarkColor(mark) {
+        if (mark === 1) {
+            return "#ec0039"; // mythic
+        } else if (mark === 2) {
+            return "#d561e6"; // legendary
+        } else if (mark === 3) {
+            return "#ffb244"; // epic
+        } else if (mark === 4) {
+            return "#32bc4f"; // rare
+        } else if (mark === 5) {
+            return "#8d8e9f"; // common
+        } else {
+            return "#ffffff";
         }
     }
 
