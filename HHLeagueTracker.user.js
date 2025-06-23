@@ -34,6 +34,8 @@
 
     info('version:', GM_info.script.version)
 
+    const LOCAL_PAGE_LOAD_TS = Date.now();
+
     const CONFIG = await loadConfig();
 
     info('config:', CONFIG);
@@ -55,15 +57,15 @@
         opponentMarks: 'HHLeagueTrackerOpponentMarks',
     }
 
-    const MY_ID = shared.Hero.infos.id;
-    const PAGE_LOAD_TS = window.server_now_ts * 1000
-    const LEAGUE_END_TS = (window.server_now_ts + window.season_end_at) * 1000;
-
     if (!opponents_list.length) {
         info('no opponents found');
         return;
     }
 
+    const MY_ID = shared.Hero.infos.id;
+    const SERVER_PAGE_LOAD_TS = window.server_now_ts * 1000;
+    const SERVER_OFFSET = SERVER_PAGE_LOAD_TS - LOCAL_PAGE_LOAD_TS;
+    const LEAGUE_END_TS = (window.server_now_ts + window.season_end_at) * 1000;
     const LEAGUE_ENDING = window.season_end_at < 10 * 60;
     const TOTAL_FIGHTS = (opponents_list.length - 1) * 3;
     const MAX_SCORE = TOTAL_FIGHTS * 25;
@@ -195,6 +197,10 @@
         console.log.apply( console, _args );
     }
 
+    function serverNow() {
+        return Date.now() + SERVER_OFFSET;
+    }
+
     function addCSS() {
         let sheet = document.createElement("style");
         sheet.textContent = [
@@ -282,12 +288,12 @@
 
         let span = document.createElement('span');
         p.appendChild(span);
-        span.innerHTML = `${FORMAT.time(next.expiration)}`;
+        span.innerHTML = `${FORMAT.time(SERVER_PAGE_LOAD_TS + next.expiration - serverNow())}`;
         span.style.color = '#2296e4';
 
         const updateTimer = setInterval(function() {
-            const now = new Date().getTime();
-            const timeLeft = PAGE_LOAD_TS + next.expiration - now;
+            const now = serverNow();
+            const timeLeft = SERVER_PAGE_LOAD_TS + next.expiration - now;
             if (timeLeft <= 0) {
                 clearInterval(updateTimer);
                 span.innerHTML = "EXPIRED";
@@ -383,7 +389,7 @@
                         totalLostPoints,
                         lastDiff: gainedScore,
                         lastLostPoints: newLostPoints,
-                        lastChangeTime: PAGE_LOAD_TS
+                        lastChangeTime: SERVER_PAGE_LOAD_TS
                     }
                     GITHUB_PARAMS.needsUpdate = true;
                 }
@@ -454,7 +460,7 @@
                 opponentRow.querySelector('.data-column[column="player_league_points"]').innerHTML = changes.pointHTML;
                 if (changes.tooltip){
                     if (changes.conditions.addChangeTime) {
-                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip + `<br>${FORMAT.time(Date.now() - changes.lastChangeTime)} ago`);
+                        opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip + `<br>${FORMAT.time(serverNow() - changes.lastChangeTime)} ago`);
                     } else {
                         opponentRow.querySelector('.data-column[column="player_league_points"]').setAttribute('tooltip', changes.tooltip);
                     }
@@ -489,7 +495,7 @@
 
                     if (oldValue && Math.abs(statDiff) > 100) { // ignore changes < 100
                         lastDiff = statDiff;
-                        lastChangeTime = PAGE_LOAD_TS;
+                        lastChangeTime = SERVER_PAGE_LOAD_TS;
                         statChanges.tooltip = `Last Stat Diff: ${FORMAT.statDiff(statDiff)} (${FORMAT.statPercent(percentage)}%)`;
                     } else if (lastChangeTime > 0) {
                         statChanges.tooltip = `Last Stat Diff: ${FORMAT.statDiff(lastDiff)} (${FORMAT.statPercent(lastPercentage)}%)`;
@@ -526,7 +532,7 @@
                     if (statChanges.conditions.neverChanged) {
                         opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip', 'No change since<br>league start');
                     } else {
-                        const timeDiff = Date.now() - statChanges.lastChangeTime;
+                        const timeDiff = serverNow() - statChanges.lastChangeTime;
 
                         const statColor = getStatColor(timeDiff, statChanges.conditions.positiveDiff);
                         if (timeDiff < 10 * 60 * 1000) { // only highlight changes in the last 10 minutes
@@ -652,7 +658,7 @@
                 tooltip.appendChild(text2);
                 if (oldTeamPower && statDiff) {
                     lastDiff = statDiff;
-                    lastChangeTime = PAGE_LOAD_TS;
+                    lastChangeTime = SERVER_PAGE_LOAD_TS;
                     powerChange.conditions.addTime = true;
                     text2.innerHTML = `Last Power Diff:<br> ${FORMAT.statDiff(statDiff)} (${FORMAT.statPercent(percentage)}%)`;
                 } else if (lastChangeTime > 0) {
@@ -708,7 +714,7 @@
 
                 const opponent = OPPONENT_DETAILS_BY_ID[id];
                 const powerChange = opponent.HHLT.teams.powerChange;
-                const timeDiff = Date.now() - powerChange.lastChangeTime;
+                const timeDiff = serverNow() - powerChange.lastChangeTime;
 
                 let tooltip = opponent.HHLT.teams.tooltip;
                 if (powerChange.conditions.addTime) {
