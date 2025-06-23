@@ -32,7 +32,7 @@
     'use strict';
     /*global shared,opponents_list,$*/
 
-    info('version:', GM_info.script.version)
+    info('version:', GM_info.script.version);
 
     const LOCAL_PAGE_LOAD_TS = Date.now();
 
@@ -82,7 +82,7 @@
 
     if (CONFIG.githubStorage.enabled) {
         if (!window.LeagueTrackerGitHubConfig) {
-            info('GitHubConfig missing, using localStorage')
+            info('GitHubConfig missing, using localStorage');
             CONFIG.githubStorage.enabled = false;
         } else {
             GITHUB_PARAMS = window.LeagueTrackerGitHubConfig;
@@ -141,7 +141,7 @@
                     setTimeout(leagueTracker, 500, false);
                     return;
                 } else if (status === 401) {
-                    info('check github config, token not valid for repo, using localStorage')
+                    info('check github config, token not valid for repo, using localStorage');
                 } else {
                     info('couldn\'t read data from github, using localStorage');
                 }
@@ -261,7 +261,7 @@
     function createBoosterCountdown() {
         const next = getNextBoosterExpiration();
         if (next.expiration === Infinity) {
-            info('no boosted unfought opponents available')
+            info('no boosted unfought opponents available');
             return;
         }
         // if Zoo's script is used place the booster timer
@@ -325,8 +325,8 @@
             if (!CONFIG.hideLevel.moveDone) {
                 // swap lvl and name header to have lvl above the avatar
                 let headers = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
-                let lvl = headers.querySelector('.data-column[column="level"]')
-                let name = headers.querySelector('.data-column[column="nickname"]')
+                let lvl = headers.querySelector('.data-column[column="level"]');
+                let name = headers.querySelector('.data-column[column="nickname"]');
                 headers.removeChild(lvl);
                 name.before(lvl);
                 CONFIG.hideLevel.moveDone = true;
@@ -401,7 +401,7 @@
                     averageColor: getAverageColor(average),
                     color: getScoreColor(totalLostPoints),
                     conditions: {},
-                }
+                };
 
                 if (LEAGUE_ENDING && CONFIG.screenshot.enabled) {
                     // since the league is about to end, calculate average and lost points as if all fights are done
@@ -426,7 +426,7 @@
                                     `<br>Total Lost Points: ${opponentData[id].totalLostPoints}`;
                 } else {
                     // add lost points below score
-                    changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-totalLostPoints || 0)}` // this avoids -0, signDisplay 'negative' isn't supported by old firefox versions
+                    changes.pointHTML = `${FORMAT.score(score)}<br>${FORMAT.score(-totalLostPoints || 0)}`; // this avoids -0, signDisplay 'negative' isn't supported by old firefox versions
 
                     const lastDiff = opponentData[id].lastDiff || 0;
                     if (lastDiff > 0) {
@@ -504,7 +504,7 @@
                     }
 
                     statChanges.conditions.positiveDiff = lastDiff > 0;
-                    statChanges.lastChangeTime = lastChangeTime
+                    statChanges.lastChangeTime = lastChangeTime;
                     opponentStats[id][stat] = {value, lastDiff, lastChangeTime};
                     allStatChanges[stat] = statChanges;
                 }
@@ -539,8 +539,7 @@
                             opponentRow.querySelector(STAT_ELEMENT_MAP[stat].span).style.color = statColor;
                         }
                         opponentRow.querySelector(STAT_ELEMENT_MAP[stat].div).setAttribute('tooltip',
-                            statChanges.tooltip
-                            + `<br>${FORMAT.time(timeDiff)} ago`);
+                            statChanges.tooltip + `<br>${FORMAT.time(timeDiff)} ago`);
                     }
                 }
             }
@@ -552,7 +551,7 @@
             opponentRow => {
                 const id = getIdFromRow(opponentRow);
 
-                const teamIcons = opponentRow.querySelector('.data-column[column="team"]').firstElementChild
+                const teamIcons = opponentRow.querySelector('.data-column[column="team"]').firstElementChild;
                 if (teamIcons.childElementCount === 2) {
                     // this will overlap the two theme elements
                     teamIcons.lastElementChild.style.marginLeft = '-0.66rem';
@@ -641,7 +640,7 @@
                                 {style: 'height: 16px; width: 16px;',});
                             div.appendChild(skillIcon);
                         }
-                        table.appendChild(div)
+                        table.appendChild(div);
                     })
                 }
                 let powerChange = { conditions: {} };
@@ -686,7 +685,7 @@
                         if (girl.can_be_blessed) {
                             correctBlessing = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
                                 (total, bonus) => {
-                                    return total * (1 + bonus / 100)
+                                    return total * (1 + bonus / 100);
                                 }, 1);
                         }
                         const expectedCaracsSum = (girl.caracs.carac1 + girl.caracs.carac2 + girl.caracs.carac3) * correctBlessing;
@@ -823,7 +822,7 @@
                             result.classList.add('lost');
                         }
                     }
-                )
+                );
             }
         );
     }
@@ -1108,9 +1107,9 @@
         let data = {
             message: message,
             content: content,
-        }
+        };
         if (sha) {
-            data.sha = sha // to write an update sha is required
+            data.sha = sha; // to write an update sha is required
         }
         await fetch(GITHUB_PARAMS.url, {
             method: 'PUT',
