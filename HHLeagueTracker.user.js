@@ -232,15 +232,15 @@
 
     function getNextBoosterExpiration() {
         const maxNameLength = 12;
-        let next = opponents_list.reduce((next, object) => {
-                if (object.can_fight
-                    && object.boosters.length
-                    && object.boosters[0].expiration * 1000 < next.expiration) {
-                    next.expiration = object.boosters[0].expiration * 1000;
-                    next.name = object.nickname.length > maxNameLength
-                        ? `${object.nickname.substring(0, maxNameLength - 1)}...`
-                        : object.nickname;
-                    next.rank = object.place;
+        let next = opponents_list.reduce((next, opp) => {
+                if (opp.can_fight
+                    && opp.boosters.length
+                    && opp.boosters[0].expiration * 1000 < next.expiration) {
+                    next.expiration = opp.boosters[0].expiration * 1000;
+                    next.name = opp.nickname.length > maxNameLength
+                        ? `${opp.nickname.substring(0, maxNameLength - 1)}...`
+                        : opp.nickname;
+                    next.rank = opp.place;
                 }
                 return next;
             }, { name:'', rank: 0, expiration: Infinity });
