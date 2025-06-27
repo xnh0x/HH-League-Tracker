@@ -272,44 +272,42 @@
         const recordLeague = document.querySelector('#leagues .record_league');
         const insert = recordLeague ?? document.querySelector('#leagues .league_end_in');
 
-        let div1 = document.createElement('div');
-        insert.before(div1);
-        div1.classList.add('booster-timer');
-        let div2 = document.createElement('div');
-        div1.appendChild(div2)
-        div2.classList.add('season-timer', 'timer');
+        const timeLeft = SERVER_PAGE_LOAD_TS + next.expiration - serverNow();
+        const $countdown = $(`
+            <div class="booster-timer">
+                <div class="season-timer timer">
+                    <p style="text-align: center;">
+                        Boosters expire<br>
+                        ${next.name} (${next.rank})<br>
+                        <span style="color: #2296e4;">${FORMAT.time(timeLeft)}</span>
+                    </p>
+                </div>
+            </div>`);
+        insert.before($countdown[0]);
+        const $boosterText = $countdown.find('p');
+        const $time = $boosterText.find('span');
 
-        let p = document.createElement('p');
-        div2.appendChild(p);
-        p.innerHTML = `Boosters expire<br>${next.name} (${next.rank})<br>`;
-        p.style.textAlign = 'center';
-        p.onclick = () => {
+        $boosterText.on('click', () => {
             // click on text will select the opponent row
             next.row.click();
             next.row.scrollIntoView({block: "center", behavior: "smooth"});
-        }
-
-        let span = document.createElement('span');
-        p.appendChild(span);
-        span.innerHTML = `${FORMAT.time(SERVER_PAGE_LOAD_TS + next.expiration - serverNow())}`;
-        span.style.color = '#2296e4';
+        });
 
         const updateTimer = setInterval(function() {
-            const now = serverNow();
-            const timeLeft = SERVER_PAGE_LOAD_TS + next.expiration - now;
+            const timeLeft = SERVER_PAGE_LOAD_TS + next.expiration - serverNow();
             if (timeLeft <= 0) {
                 clearInterval(updateTimer);
-                span.innerHTML = "EXPIRED";
-                p.onclick = () => {
+                $time.text("EXPIRED");
+                $boosterText.off('click').on('click', () => {
                     // after the boosters expire a click will also reload the league
                     next.row.click();
                     window.location.reload();
-                }
+                });
                 if (CONFIG.boosterTimer.sound) {
                     playUnboostSound();
                 }
             } else {
-                span.innerHTML = `${FORMAT.time(timeLeft)}`;
+                $time.text(`${FORMAT.time(timeLeft)}`);
             }
         }, 1000);
     }
