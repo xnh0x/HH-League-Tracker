@@ -162,6 +162,8 @@
             }
         );
 
+        $('.data-row.body-row.selected')[0]?.scrollIntoView({block: "center", behavior: "smooth"});
+
         if (CONFIG.boosterTimer.enabled) {
             createBoosterCountdown();
         }
@@ -284,6 +286,7 @@
         p.onclick = () => {
             // click on text will select the opponent row
             next.row.click();
+            next.row.scrollIntoView({block: "center", behavior: "smooth"});
         }
 
         let span = document.createElement('span');
