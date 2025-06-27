@@ -232,20 +232,28 @@
         return parseInt(row.querySelector('.data-column[column="nickname"] .nickname').getAttribute('id-member'));
     }
 
-    function getNextBoosterExpiration() {
-        const maxNameLength = 12;
+    function getNextBoosterExpiration(ignore) {
+        const maxNameLength = 8;
         let next = opponents_list.reduce((next, opp) => {
-                if (opp.can_fight
-                    && opp.boosters.length
-                    && opp.boosters[0].expiration * 1000 < next.expiration) {
-                    next.expiration = opp.boosters[0].expiration * 1000;
-                    next.name = opp.nickname.length > maxNameLength
-                        ? `${opp.nickname.substring(0, maxNameLength - 1)}...`
-                        : opp.nickname;
-                    next.rank = opp.place;
+            if (opp.can_fight
+                && !ignore.includes(opp.player.id_fighter)
+                && opp.boosters.length) {
+                if (!(CONFIG.boosterTimer.ignoreGrays
+                    && JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.opponentMarks))[opp.player.id_fighter] === 5)) {
+                    next.boostedOppsLeft += 1;
+                    if (opp.boosters[0].expiration * 1000 < next.expiration) {
+                        next.expiration = opp.boosters[0].expiration * 1000;
+                        next.name = opp.nickname.length > maxNameLength
+                            ? `${opp.nickname.substring(0, maxNameLength - 1)}...`
+                            : opp.nickname;
+                        next.rank = opp.place;
+                        next.id = opp.player.id_fighter;
+                    }
+
                 }
-                return next;
-            }, { name:'', rank: 0, expiration: Infinity });
+            }
+            return next;
+        }, { name:'', id: null, rank: 0, expiration: Infinity, boostedOppsLeft: 0 });
 
         next.row = (() => {
             for (let row of document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row')) {
@@ -260,8 +268,14 @@
         return next;
     }
 
-    function createBoosterCountdown() {
-        const next = getNextBoosterExpiration();
+    function createBoosterCountdown(ignore = []) {
+        const next = getNextBoosterExpiration(ignore);
+        if (CONFIG.boosterTimer.ignoreGrays && next.boostedOppsLeft === 0) {
+            // if there is no one else left allow grays
+            CONFIG.boosterTimer.ignoreGrays = false;
+            createBoosterCountdown(ignore);
+            return;
+        }
         if (next.expiration === Infinity) {
             info('no boosted unfought opponents available');
             return;
@@ -287,7 +301,7 @@
         const $boosterText = $countdown.find('p');
         const $time = $boosterText.find('span');
 
-        $boosterText.on('click', () => {
+        $boosterText.off('click').on('click', () => {
             // click on text will select the opponent row
             next.row.click();
             next.row.scrollIntoView({block: "center", behavior: "smooth"});
@@ -310,6 +324,16 @@
                 $time.text(`${FORMAT.time(timeLeft)}`);
             }
         }, 1000);
+
+        if (CONFIG.boosterTimer.skip) {
+            $boosterText.off('contextmenu').on('contextmenu', (e) => {
+                e.preventDefault();
+                clearInterval(updateTimer);
+                ignore.push(next.id);
+                $countdown.remove();
+                createBoosterCountdown(ignore);
+            });
+        }
     }
 
     function calculateChanges(opponentData, opponentStats) {
@@ -1147,7 +1171,7 @@
             screenshot:
                 { enabled: true },
             boosterTimer:
-                { enabled: true, sound: false },
+                { enabled: true, sound: false, ignoreGrays: false },
             challenges:
                 { enabled: false, allRed: true, twentyFive: '' },
         };
@@ -1316,12 +1340,20 @@
                     { key: 'sound', default: false,
                         label: 'Play a sound once they do',
                     },
+                    { key: 'skip', default: true,
+                        label: 'Right click skips to the next opponent',
+                    },
+                    { key: 'ignoreGrays', default: false,
+                        label: 'Go through opponents that aren\'t marked gray first',
+                    },
                 ],
             },
             run(subSettings) {
                 config.boosterTimer = {
                     enabled: true,
                     sound: subSettings.sound,
+                    skip: subSettings.skip,
+                    ignoreGrays: subSettings.ignoreGrays,
                 };
             },
         });
