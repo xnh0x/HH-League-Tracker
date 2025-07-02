@@ -169,21 +169,24 @@
         }
 
         calculateChanges(opponentData, opponentStats);
-        writeTable();
-
-        // redo changes after sorting the table
-        const sortingObserver = new MutationObserver(() => { writeTable(); })
-        sortingObserver.observe(document.querySelector('.league_table .data-list'), {childList: true})
 
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
         if (CONFIG.githubStorage.enabled) {
             if (GITHUB_PARAMS.needsUpdate) {
-                await commitUpdate(opponentData);
+                commitUpdate(opponentData).catch((reason) => {
+                    info(`github update failed, reason: ${reason}`)
+                });
             } else {
                 info('nothing changed, no need to update');
             }
         }
+
+        writeTable();
+
+        // redo changes after sorting the table
+        const sortingObserver = new MutationObserver(() => { writeTable(); })
+        sortingObserver.observe(document.querySelector('.league_table .data-list'), {childList: true})
     }
 
     function info() {
