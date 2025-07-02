@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.13.0
+// @version      1.13.1
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
