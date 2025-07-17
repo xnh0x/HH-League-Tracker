@@ -368,7 +368,7 @@
         }
 
         if (CONFIG.activeSkill.enabled) {
-            markActiveSkill();
+            HHPlusPlus.Helpers.doWhenSelectorAvailable('#leagues img.team-theme.icon', markActiveSkill);
         }
 
         writeTeams();
