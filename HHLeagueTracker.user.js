@@ -237,12 +237,14 @@
 
     function getNextBoosterExpiration(ignore) {
         const maxNameLength = 8;
+        const opponentMarks = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.opponentMarks));
         let next = opponents_list.reduce((next, opp) => {
             if (opp.can_fight
                 && !ignore.includes(opp.player.id_fighter)
                 && opp.boosters.length) {
                 if (!(CONFIG.boosterTimer.ignoreGrays
-                    && JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.opponentMarks))[opp.player.id_fighter] === 5)) {
+                    && opponentMarks
+                    && opponentMarks[opp.player.id_fighter] === 5)) {
                     next.boostedOppsLeft += 1;
                     if (opp.boosters[0].expiration * 1000 < next.expiration) {
                         next.expiration = opp.boosters[0].expiration * 1000;
