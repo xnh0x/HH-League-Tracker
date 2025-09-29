@@ -90,8 +90,8 @@
             // week and minimum id of all players uniquely identify a league bracket
             const LEAGUE_ID = opponents_list.reduce((a,b) => a.player.id_fighter < b.player.id_fighter ? a : b).player.id_fighter;
             const WEEK = getWeekName(LEAGUE_END_TS);
-            GITHUB_PARAMS.path = `${PLATFORM}/${WEEK}/${LEAGUE_ID}_scores.json`;
-            GITHUB_PARAMS.url = `https://api.github.com/repos/${GITHUB_PARAMS.owner}/${GITHUB_PARAMS.repo}/contents/${GITHUB_PARAMS.path}`;
+            GITHUB_PARAMS.scorePath = `${PLATFORM}/${WEEK}/${LEAGUE_ID}_scores.json`;
+            GITHUB_PARAMS.markPath = `${PLATFORM}/marks/${MY_ID}.json`;
         }
     }
 
@@ -110,7 +110,7 @@
         }
     }
 
-    GITHUB_PARAMS.needsUpdate = false;
+    GITHUB_PARAMS.needsScoreUpdate = false;
     const observer = new MutationObserver(async () => {
         if (document.querySelectorAll('#leagues .league_table').length) {
             observer.disconnect();
@@ -126,14 +126,12 @@
         let opponentData = {};
         if (CONFIG.githubStorage.enabled) {
             try {
-                const {data, sha} = await mergeLocalAndGithubData(localStorageData);
-                opponentData = data;
-                GITHUB_PARAMS.sha = sha;
+                opponentData = await mergeScores(localStorageData);
             } catch (status) {
                 if (firstRun && status === 404) {
-                    info(`${GITHUB_PARAMS.path} doesn't exist yet`)
+                    info(`${GITHUB_PARAMS.scorePath} doesn't exist yet`)
                     try {
-                        await commitNewFile();
+                        await commitNewFile(GITHUB_PARAMS.scorePath);
                     } catch (f) {
                         info(f);
                     }
@@ -173,8 +171,8 @@
         localStorage.setItem(LOCAL_STORAGE_KEYS.data, JSON.stringify(opponentData));
         localStorage.setItem(LOCAL_STORAGE_KEYS.stats, JSON.stringify(opponentStats));
         if (CONFIG.githubStorage.enabled) {
-            if (GITHUB_PARAMS.needsUpdate) {
-                commitUpdate(opponentData).catch((reason) => {
+            if (GITHUB_PARAMS.needsScoreUpdate) {
+                commitUpdate(GITHUB_PARAMS.scorePath, opponentData, GITHUB_PARAMS.scoreSha).catch((reason) => {
                     info(`github update failed, reason: ${reason}`)
                 });
             } else {
@@ -226,7 +224,7 @@
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
             // color rank number of marked opponents
             [1,2,3,4,5].map((i) =>
-                `.LT-mark-${i} .data-column[column="place"] { color:${getMarkColor(i)} }`).join(' '),
+                `.data-row.body-row[mark="${i}"] .data-column[column="place"] { color:${getMarkColor(i)} }`).join(' '),
         ].join(' ');
         document.head.appendChild(sheet);
     }
@@ -243,8 +241,8 @@
                 && !ignore.includes(opp.player.id_fighter)
                 && opp.boosters.length) {
                 if (!(CONFIG.boosterTimer.ignoreGrays
-                    && opponentMarks
-                    && opponentMarks[opp.player.id_fighter] === 5)) {
+                      && opponentMarks
+                      && opponentMarks[opp.player.id_fighter] === 5)) {
                     next.boostedOppsLeft += 1;
                     if (opp.boosters[0].expiration * 1000 < next.expiration) {
                         next.expiration = opp.boosters[0].expiration * 1000;
@@ -406,7 +404,7 @@
                         // the storage repo with someone who is in your league
                         opponentData[id].lastLostPoints += correction;
                         opponentData[id].totalLostPoints += correction;
-                        GITHUB_PARAMS.needsUpdate = true;
+                        GITHUB_PARAMS.needsScoreUpdate = true;
                     }
                     totalLostPoints = MY_LOST_POINTS;
                     newLostPoints = totalLostPoints - oldLostPoints;
@@ -421,7 +419,7 @@
                         lastLostPoints: newLostPoints,
                         lastChangeTime: SERVER_PAGE_LOAD_TS
                     }
-                    GITHUB_PARAMS.needsUpdate = true;
+                    GITHUB_PARAMS.needsScoreUpdate = true;
                 }
 
                 const average = score ? 25 * score / (score + totalLostPoints) : 0;
@@ -635,7 +633,7 @@
                     const currentTeam = JSON.stringify({theme: opponentTeam.theme, type: type});
                     if (!teamsSet.has(currentTeam)) {
                         teamsSet.add(currentTeam);
-                        if (id !== MY_ID) { GITHUB_PARAMS.needsUpdate = true; }
+                        if (id !== MY_ID) { GITHUB_PARAMS.needsScoreUpdate = true; }
                     }
                     const teams = Array.from(teamsSet).sort();
 
@@ -863,22 +861,23 @@
             (i, row) => {
                 const id = getIdFromRow(row);
                 let mark = getMark(id);
-                setClass(mark);
+                setMarkAttr(mark);
 
                 const $rank = $(row).find('.data-column[column="place"]');
+                $rank.off('click');
                 $rank.on('click', () => {
-                    setClass((mark + 1) % 6);
+                    setMarkAttr((mark + 1) % 6);
                 });
+                $rank.off('contextmenu');
                 $rank.on('contextmenu', (e) => {
                     e.preventDefault();
-                    setClass(0);
+                    setMarkAttr(0);
                 });
 
-                function setClass(newMark) {
-                    $(row).removeClass(`LT-mark-${mark}`);
+                function setMarkAttr(newMark) {
                     mark = newMark;
                     setMark(id, mark);
-                    $(row).addClass(`LT-mark-${mark}`);
+                    $(row).attr('mark', mark);
                 }
             }
         );
@@ -1076,8 +1075,8 @@
         return year + 'W' + (weekNumber < 10 ? '0' : '') + weekNumber;
     }
 
-    async function mergeLocalAndGithubData(localData) {
-        const github = await readFromGithub();
+    async function mergeScores(localData) {
+        const github = await readFromGithub(GITHUB_PARAMS.scorePath);
         // merge local storage data into the data from GitHub to not lose data if sync was previously off or
         // temporarily unavailable
         if (JSON.stringify(localData) !== JSON.stringify(github.data)) {
@@ -1085,26 +1084,43 @@
                 if (!github.data[id]
                     || github.data[id].totalLostPoints < local.totalLostPoints // lost points are more accurate
                     || (github.data[id].totalLostPoints === local.totalLostPoints
-                        && github.data[id].score < local.score) // lost points are as good and score is newer
-                ) {
-                    GITHUB_PARAMS.needsUpdate = true;
+                        && github.data[id].score < local.score)) // lost points are as good and score is newer
+                {
+                    GITHUB_PARAMS.needsScoreUpdate = true;
                     github.data[id] = local;
                 }
             }
         }
-        return github;
+        GITHUB_PARAMS.scoreSha = github.sha;
+        return github.data;
     }
 
-    async function readFromGithub() {
-        info(`reading ${GITHUB_PARAMS.path}`);
-        const response = await fetch(GITHUB_PARAMS.url, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/vnd.github+json',
-                'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
-                'If-None-Match': '' // workaround for avoiding cached data
+    async function mergeMarks(localData) {
+        const github = await readFromGithub(GITHUB_PARAMS.markPath);
+        if (JSON.stringify(localData) !== JSON.stringify(github.data)) {
+            for (const [id, mark] of Object.entries(localData)) {
+                if (!github.data[id]) {
+                    GITHUB_PARAMS.needsMarkUpdate = true;
+                    github.data[id] = mark;
+                }
             }
-        });
+        }
+        GITHUB_PARAMS.markSha = github.sha;
+        return github.data;
+    }
+
+    async function readFromGithub(path) {
+        info(`reading ${path}`);
+        const response = await fetch(
+            `https://api.github.com/repos/${GITHUB_PARAMS.owner}/${GITHUB_PARAMS.repo}/contents/${path}`,
+            {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
+                    'If-None-Match': '' // workaround for avoiding cached data
+                }
+            });
         if (response.status !== 200) {
             throw response.status;
         }
@@ -1115,25 +1131,25 @@
         };
     }
 
-    function commitMessage(action) {
-        return `${(new Date()).toISOString()} [${shared.Hero.infos.name}] ${action} ${GITHUB_PARAMS.path}`;
+    function commitMessage(path, action) {
+        return `${(new Date()).toISOString()} [${shared.Hero.infos.name}] ${action} ${path}`;
     }
 
-    async function commitNewFile() {
-        info(`creating ${GITHUB_PARAMS.path}`);
-        const message = commitMessage('create');
+    async function commitNewFile(path) {
+        info(`creating ${path}`);
+        const message = commitMessage(path, 'create');
         const content = btoa('{}'); // needs to be encoded in base64
-        await writeToGithub(content, message);
+        await writeToGithub(path, content, message);
     }
 
-    async function commitUpdate(data) {
-        info(`updating ${GITHUB_PARAMS.path}`);
-        const message = commitMessage('update');
+    async function commitUpdate(path, data, sha) {
+        info(`updating ${path}`);
+        const message = commitMessage(path, 'update');
         const content = btoa(JSON.stringify(data, null, 2)); // needs to be encoded in base64
-        await writeToGithub(content, message, GITHUB_PARAMS.sha);
+        await writeToGithub(path, content, message, sha);
     }
 
-    async function writeToGithub(content, message, sha = null) {
+    async function writeToGithub(path, content, message, sha = null) {
         let data = {
             message: message,
             content: content,
@@ -1141,14 +1157,16 @@
         if (sha) {
             data.sha = sha; // to write an update sha is required
         }
-        await fetch(GITHUB_PARAMS.url, {
-            method: 'PUT',
-            headers: {
-                'Accept': 'application/vnd.github+json',
-                'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
-            },
-            body: JSON.stringify(data),
-        });
+        await fetch(
+            `https://api.github.com/repos/${GITHUB_PARAMS.owner}/${GITHUB_PARAMS.repo}/contents/${path}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
+                },
+                body: JSON.stringify(data),
+            });
     }
 
     function getHHPlusPlusConfig() {
