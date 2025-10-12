@@ -249,7 +249,7 @@
     function getNextBoosterExpiration(ignore) {
         const maxNameLength = 8;
         const opponentMarks = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.opponentMarks));
-        let next = opponents_list.reduce((next, opp) => {
+        return opponents_list.reduce((next, opp) => {
             if (opp.can_fight
                 && !ignore.includes(opp.player.id_fighter)
                 && opp.boosters.length) {
@@ -269,19 +269,7 @@
                 }
             }
             return next;
-        }, { name:'', id: null, rank: 0, expiration: Infinity, boostedOppsLeft: 0 });
-
-        next.row = (() => {
-            for (let row of document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row')) {
-                const rank = parseInt(row.querySelector('.data-column[column="place"]').innerHTML);
-
-                if (rank === next.rank) {
-                    return row;
-                }
-            }
-        })();
-
-        return next;
+        }, {name: '', id: null, rank: 0, expiration: Infinity, boostedOppsLeft: 0});
     }
 
     function createBoosterCountdown(ignore = []) {
@@ -319,8 +307,9 @@
 
         $boosterText.off('click').on('click', () => {
             // click on text will select the opponent row
-            next.row.click();
-            next.row.scrollIntoView({block: "center", behavior: "smooth"});
+            const $nextRow = $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`);
+            $nextRow.trigger('click');
+            $nextRow.get(0).scrollIntoView({block: "center", behavior: "smooth"});
         });
 
         const updateTimer = setInterval(function() {
@@ -330,7 +319,7 @@
                 $time.text("EXPIRED");
                 $boosterText.off('click').on('click', () => {
                     // after the boosters expire a click will also reload the league
-                    next.row.click();
+                    $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`).trigger('click');
                     window.location.reload();
                 });
                 if (CONFIG.boosterTimer.sound) {
