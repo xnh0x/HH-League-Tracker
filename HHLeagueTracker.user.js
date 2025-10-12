@@ -786,12 +786,12 @@
             const pointsColumn = tableHeader.querySelector('.data-column[column="player_league_points"]');
 
             let span = document.createElement('span');
-            span.innerHTML = 'Average';
+            span.innerHTML = 'Avg';
 
             let avgColumn = document.createElement('div');
             avgColumn.classList.add('data-column', 'head-column');
             avgColumn.setAttribute('column', 'average');
-            avgColumn.style.textAlign = 'center';
+            avgColumn.style.marginLeft = '1.2rem';
             avgColumn.appendChild(span);
             avgColumn.style.minWidth = '1.8rem';
 
