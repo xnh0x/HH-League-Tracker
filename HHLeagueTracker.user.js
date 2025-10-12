@@ -304,6 +304,8 @@
         insert.before($countdown[0]);
         const $boosterText = $countdown.find('p');
         const $time = $boosterText.find('span');
+        const expirationDate = (new Date(SERVER_PAGE_LOAD_TS + next.expiration));
+        $time.attr('tooltip', `${expirationDate.toLocaleString(document.documentElement.lang.replace('_','-'), {hour:'numeric', minute:'numeric', second:'numeric'})}`);
 
         $boosterText.off('click').on('click', () => {
             // click on text will select the opponent row
