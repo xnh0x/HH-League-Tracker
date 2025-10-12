@@ -634,8 +634,8 @@
                 const opponentTeam = opponent.player.team;
                 let tooltip = document.createElement('div');
 
-                // store your own teams locally
                 if (CONFIG.usedTeams.enabled) {
+                    // store your own teams locally
                     let teamsSet = (id !== MY_ID)
                         ? opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set()
                         : new Set(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.playerTeams)));
