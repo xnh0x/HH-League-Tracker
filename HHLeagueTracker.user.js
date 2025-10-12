@@ -36,6 +36,17 @@
 
     const LOCAL_PAGE_LOAD_TS = Date.now();
 
+    const COLOR = {
+        mythic: '#ec0039',
+        mythicLight: '#ff8aa6',
+        legendary: '#d561e6',
+        epic: '#ffb244',
+        rare: '#32bc4f',
+        rareLight: '#a4e7b2',
+        common: '#8d8e9f',
+        white: '#ffffff',
+    };
+
     const CONFIG = await loadConfig();
 
     info('config:', CONFIG);
@@ -899,68 +910,68 @@
 
     function getScoreColor(lostPoints) {
         if (lostPoints <= 25) {
-            return "#ec0039"; // mythic
+            return COLOR.mythic;
         } else if (lostPoints <= 50) {
-            return "#d561e6"; // legendary
+            return COLOR.legendary;
         } else if (lostPoints <= 100) {
-            return "#ffb244"; // epic
+            return COLOR.epic;
         } else if (lostPoints <= 200) {
-            return "#32bc4f"; // rare
+            return COLOR.rare;
         } else {
-            return "#8d8e9f"; // common
+            return COLOR.common;
         }
     }
 
     function getAverageColor(average) {
         if (average >= 24.9) {
-            return "#ec0039"; // mythic
+            return COLOR.mythic;
         } else if (average >= 24.7) {
-            return "#d561e6"; // legendary
+            return COLOR.legendary;
         } else if (average >= 24.4) {
-            return "#ffb244"; // epic
+            return COLOR.epic;
         } else if (average >= 24) {
-            return "#32bc4f"; // rare
+            return COLOR.rare;
         } else {
-            return "#8d8e9f"; // common
+            return COLOR.common;
         }
     }
 
     function getMarkColor(mark) {
         if (mark === 1) {
-            return "#ec0039"; // mythic
+            return COLOR.mythic;
         } else if (mark === 2) {
-            return "#d561e6"; // legendary
+            return COLOR.legendary;
         } else if (mark === 3) {
-            return "#ffb244"; // epic
+            return COLOR.epic;
         } else if (mark === 4) {
-            return "#32bc4f"; // rare
+            return COLOR.rare;
         } else if (mark === 5) {
-            return "#8d8e9f"; // common
+            return COLOR.common;
         } else {
-            return "#ffffff";
+            return COLOR.white;
         }
     }
 
     function getStatColor(time, positive) {
         return (time < 60 * 1000)
-            ? (positive ? "#ec0039" : "#32bc4f")
-            : (positive ? "#ff8aa6" : "#a4e7b2"); // lighter highlight color for changes older than 1 minute
+            ? (positive ? COLOR.mythic : COLOR.rare)
+            : (positive ? COLOR.mythicLight : COLOR.rareLight); // lighter highlight color for changes older than 1 minute
     }
 
     function getSkillByElement(element, ocd = false) {
         switch (element) {
             case 'fire':
             case 'water':
-                return {type: 'execute', id: 14, color: ocd ? '#66cd00' : '#32bc4f'};
+                return {type: 'execute', id: 14, color: ocd ? '#66cd00' : COLOR.rare};
             case 'nature':
             case 'psychic':
-                return {type: 'reflect', id: 13, color: ocd ? '#b968e6' : '#ec0039'};
+                return {type: 'reflect', id: 13, color: ocd ? '#b968e6' : COLOR.mythic};
             case 'light':
             case 'stone':
-                return {type: 'shield', id: 12, color: ocd ? '#ffa500' : '#ffb244'};
+                return {type: 'shield', id: 12, color: ocd ? '#ffa500' : COLOR.epic};
             case 'darkness':
             case 'sun':
-                return {type: 'stun', id: 11, color: ocd ? '#14b4d9' : '#d561e6'};
+                return {type: 'stun', id: 11, color: ocd ? '#14b4d9' : COLOR.legendary};
             default:
                 throw `Unknown element: ${element}`;
         }
