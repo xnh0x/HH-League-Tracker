@@ -380,6 +380,10 @@
             addAverageColumn();
         }
 
+        if (CONFIG.bulb.enabled) {
+            addBulbColumn();
+        }
+
         if (CONFIG.activeSkill.enabled) {
             HHPlusPlus.Helpers.doWhenSelectorAvailable('#leagues img.team-theme.icon', markActiveSkill);
         }
@@ -710,6 +714,35 @@
                 powerChange.conditions.positiveDiff = lastDiff > 0;
                 powerChange.lastChangeTime = lastChangeTime;
 
+                const usedBulbs = opponentTeam.girls.reduce(((total, girl, i) => {
+                    return total + Object.values(girl.skill_tiers_info).reduce((bulbs, skill) => {
+                        // ignore income skills and active skills of non-center girls
+                        if (skill.tier === 1 || (i && skill.tier === 5) ) return bulbs;
+                        return bulbs + skill.skill_points_used;
+                    }, 0);
+                }), 0);
+
+                const maxBulbs = opponentTeam.girls.reduce(((total, girl, i) => {
+                    switch (girl.girl.rarity.toLowerCase()) {
+                        case 'mythic':
+                            return total + (i ? 20 : 25);
+                        case 'legendary':
+                            return total + (i ? 17 : 21);
+                        case 'epic':
+                            return total + (i ? 16 : 19);
+                        case 'rare':
+                            return total + (i ? 13 : 15);
+                        case 'common':
+                        case 'starting':
+                            return total + (i ? 12 : 13);
+                        default:
+                            info(`unknown rarity: ${girl.girl.rarity.toLowerCase()}`);
+                            return total;
+                    }
+                }), 0);
+
+                const bulbColor = getBulbColor(usedBulbs / maxBulbs);
+
                 // XXX apparently the equipment is always correct for the player and always wrong for the opponents
                 // regardless if the bug is active or not so this doesn't work to detect the bug
 
@@ -740,7 +773,7 @@
 
                 powerChange.staleBlessingCount = staleBlessingCount;
                 opponentStats[id]['power'] = {teamPower, lastDiff, lastChangeTime};
-                opponent.HHLT.teams = { tooltip: tooltip.innerHTML, powerChange};
+                opponent.HHLT.teams = { tooltip: tooltip.innerHTML, powerChange, usedBulbs, bulbColor};
             }
         );
     }
@@ -816,6 +849,53 @@
                 avgColumn.innerHTML = OPPONENT_DETAILS_BY_ID[id].HHLT.score.average;
 
                 pointsColumn.after(avgColumn);
+            }
+        );
+    }
+
+    function addBulbColumn() {
+        const tableHeader = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
+        // this will run after every sorting of the table so the header
+        // only needs to be created the first time
+        if (!tableHeader.querySelector('.data-column[column="bulbs"]')) {
+
+            const pointsColumn = tableHeader.querySelector('.data-column[column="team"]');
+
+            let span = document.createElement('span');
+            span.classList.add('scrolls_mythic_icn');
+
+            let bulbColumn = document.createElement('div');
+            bulbColumn.classList.add('data-column', 'head-column');
+            bulbColumn.setAttribute('column', 'bulbs');
+            bulbColumn.style.textAlign = 'center';
+            bulbColumn.appendChild(span);
+            bulbColumn.style.minWidth = '1.1rem';
+            bulbColumn.style.marginLeft = '0';
+
+            pointsColumn.after(bulbColumn);
+        }
+
+        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
+            opponentRow => {
+                const id = getIdFromRow(opponentRow);
+                const teamColumn = opponentRow.querySelector('.data-column[column="team"]');
+
+                let bulbColumn = document.createElement('div');
+                bulbColumn.classList = teamColumn.classList;
+                bulbColumn.setAttribute('column', 'bulbs');
+                bulbColumn.style.minWidth = '1.1rem';
+                bulbColumn.style.fontSize = '10px';
+                bulbColumn.style.marginLeft = '0.15rem';
+                bulbColumn.style.marginRight = '0.15rem';
+                bulbColumn.style.textAlign = 'center';
+
+                if (CONFIG.bulb.color) {
+                    bulbColumn.style.color = OPPONENT_DETAILS_BY_ID[id].HHLT.teams.bulbColor;
+                }
+
+                bulbColumn.innerHTML = OPPONENT_DETAILS_BY_ID[id].HHLT.teams.usedBulbs;
+
+                teamColumn.after(bulbColumn);
             }
         );
     }
@@ -930,6 +1010,20 @@
         } else if (average >= 24.4) {
             return COLOR.epic;
         } else if (average >= 24) {
+            return COLOR.rare;
+        } else {
+            return COLOR.common;
+        }
+    }
+
+    function getBulbColor(ratio) {
+        if (ratio === 1) {
+            return COLOR.mythic;
+        } else if (ratio >= 0.85) {
+            return COLOR.legendary;
+        } else if (ratio >= 0.55) {
+            return COLOR.epic;
+        } else if (ratio >= 0.25) {
             return COLOR.rare;
         } else {
             return COLOR.common;
@@ -1182,6 +1276,8 @@
                 { enabled: false },
             average:
                 { enabled: false, color: false },
+            bulb:
+                { enabled: false, color: false },
             hideLevel:
                 { enabled: false, move: false },
             screenshot:
@@ -1294,6 +1390,31 @@
             },
         });
         config.average.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'bulb',
+                label: 'Add column with equipped <span tooltip="count excludes tier 1 and for the non-center girls also tier 5" style="font-style: italic">relevant</span> bulbs',
+                default: false,
+                subSettings: [
+                    { key: 'color', default: false,
+                        label: `Color by percentage of filled bulbs<br>`
+                            + ` <span style="color: ${getBulbColor(1.00)}">100%</span>`
+                            + ` <span style="color: ${getBulbColor(0.85)}">&ge;85%</span>`
+                            + ` <span style="color: ${getBulbColor(0.55)}">&ge;55%</span>`
+                            + ` <span style="color: ${getBulbColor(0.25)}">&ge;25%</span>`,
+                    },
+                ],
+            },
+            run(subSettings) {
+                config.bulb = {
+                    enabled: true,
+                    color: subSettings.color,
+                };
+            },
+        });
+        config.bulb.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
