@@ -60,10 +60,10 @@ Clicking on the rank will cycle through a couple of colors to serve as a very si
 
 ![Markers](https://github.com/user-attachments/assets/f27112d5-b867-4228-8aa1-0127498e0f66)
 
-Gray is the only color with an added effect: the booster timer can optionally prioritize the non-grey opponents. All other colors are just visual and can be freely used.
+Gray is the only color with an added effect: the booster timer can optionally prioritize the non-gray opponents. All other colors are just visual and can be freely used.
 
 ### Bulbs (requires HH++ BDSM)
-Adds a column that shows the amount of used bulbs in the team. The count will exclude the bulbs that are irrelevant for PvP, i.e tier 1 income skills and for non-center girls also tier 5 since that skill isn't active. Since the total amount will vary based on the rarities of the girls, the coloring is based on the percentage of used bulbs from *red* meaning all relevant skills are maxed down to *gray* meaning barely any bulbs are used.
+Adds a column that shows the amount of used bulbs in the team. The count will exclude the skills that are irrelevant for PvP, i.e tier 1 income and for non-center girls also tier 5 because that skill isn't active. Since the total amount will vary based on the rarities of the girls, the coloring is based on the percentage of used bulbs from *red* meaning all relevant skills are maxed down to *gray* meaning barely any bulbs are used.
 
 ![Bulbs](https://github.com/user-attachments/assets/4c02b0c9-ba9e-4d2c-a7ce-4d8daf5b85c4)
 
