@@ -324,6 +324,7 @@
                     // after the boosters expire a click will also reload the league
                     $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`).trigger('click');
                     window.location.reload();
+                    $boosterText.off('click');
                 });
                 if (CONFIG.boosterTimer.sound) {
                     unboostSound.play();
