@@ -1449,7 +1449,7 @@
             group: 'LeagueTracker',
             configSchema: {
                 baseKey: 'screenshot',
-                label: 'If the league is about to end (<5m) calculate average and lost points as if all fights are done',
+                label: 'If the league is about to end (<10m) calculate average and lost points as if all fights are done',
                 default: true,
             },
             run() {
