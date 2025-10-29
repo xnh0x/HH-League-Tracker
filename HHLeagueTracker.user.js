@@ -32,8 +32,6 @@
     'use strict';
     /*global shared,opponents_list,$*/
 
-    info('version:', GM_info.script.version);
-
     const LOCAL_PAGE_LOAD_TS = Date.now();
 
     const COLOR = {
@@ -48,8 +46,6 @@
     };
 
     const CONFIG = await loadConfig();
-
-    info('config:', CONFIG);
 
     if(window.location.pathname !== '/leagues.html') {
         return;
@@ -1288,7 +1284,7 @@
 
         hhPlusPlusConfig.registerGroup({
             key: 'LeagueTracker',
-            name: 'League Tracker'
+            name: `<span tooltip="${GM_info.script.version}">League Tracker</span>`
         });
 
         hhPlusPlusConfig.registerModule({
