@@ -377,10 +377,6 @@
             addBulbColumn();
         }
 
-        if (CONFIG.activeSkill.enabled) {
-            HHPlusPlus.Helpers.doWhenSelectorAvailable('#leagues img.team-theme.icon', markActiveSkill);
-        }
-
         writeTeams();
 
         writeStats();
@@ -584,44 +580,6 @@
         );
     }
 
-    function markActiveSkill() {
-        document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
-            opponentRow => {
-                const id = getIdFromRow(opponentRow);
-
-                const teamIcons = opponentRow.querySelector('.data-column[column="team"]').firstElementChild;
-                if (teamIcons.childElementCount === 2) {
-                    // this will overlap the two theme elements
-                    teamIcons.lastElementChild.style.marginLeft = '-0.66rem';
-                }
-
-                const center = OPPONENT_DETAILS_BY_ID[id].player.team.girls[0];
-                if (center.skill_tiers_info['5']?.skill_points_used) {
-                    const {type, id, color} = getSkillByElement(center.girl.element, CONFIG.activeSkill.ocd);
-
-                    if (CONFIG.activeSkill.noIcon) {
-                        applySkillColor(opponentRow.querySelector('.data-column[column="nickname"]'), color);
-                    } else {
-                        const tooltip = `${type} ${center.skills[id].skill.display_value_text}`;
-                        addSkillIcon(teamIcons, type, tooltip);
-                    }
-                }
-            }
-        );
-    }
-
-    function applySkillColor(nickname, color) {
-        // remove clubmate class from League++ so clubmates get colored correctly too
-        nickname.classList.remove("clubmate");
-        nickname.style.color = color;
-    }
-
-    function addSkillIcon(teamIcons, type, tooltip) {
-        // move the icon a little closer together
-        teamIcons.lastElementChild.style.marginRight = '-0.15rem';
-        teamIcons.appendChild(getSkillIcon(type, {tooltip}));
-    }
-
     function updateTeams(opponentData, opponentStats) {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
@@ -629,6 +587,11 @@
 
                 const opponent = OPPONENT_DETAILS_BY_ID[id];
                 const opponentTeam = opponent.player.team;
+
+                const skill = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
+                    ? getSkillByElement(opponentTeam.girls[0].girl.element)
+                    : null;
+
                 let tooltip = document.createElement('div');
 
                 if (CONFIG.usedTeams.enabled) {
@@ -637,10 +600,7 @@
                         ? opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set()
                         : new Set(JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEYS.playerTeams)));
 
-                    let type = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
-                        ? getSkillByElement(opponentTeam.girls[0].girl.element).type
-                        : null;
-                    const currentTeam = JSON.stringify({theme: opponentTeam.theme, type: type});
+                    const currentTeam = JSON.stringify({theme: opponentTeam.theme, type: skill?.type});
                     if (!teamsSet.has(currentTeam)) {
                         teamsSet.add(currentTeam);
                         if (id !== MY_ID) { GITHUB_PARAMS.needsUpdate = true; }
@@ -763,10 +723,19 @@
                     })
                     powerChange.expectedPowerDiff = expectedTP - teamPower;
                 }
-
                 powerChange.staleBlessingCount = staleBlessingCount;
+
+                const skillIcon = skill
+                    ? getSkillIcon(skill.type, {
+                        style: 'height: 16px; width: 16px;',
+                        tooltip: `${skill.type} ${opponentTeam.girls[0].skills[skill.id].skill.display_value_text}`})
+                    : null;
+                const themeIcons = opponentTeam.theme
+                    .split(',')
+                    .map(element => getElementIcon(element, {style: 'height: 16px; width: 16px;'}));
+
                 opponentStats[id]['power'] = {teamPower, lastDiff, lastChangeTime};
-                opponent.HHLT.teams = { tooltip: tooltip.innerHTML, powerChange, usedBulbs, bulbColor};
+                opponent.HHLT.teams = { themeIcons, skill, skillIcon, teamPower: FORMAT.power(teamPower), tooltip: tooltip.innerHTML, powerChange, usedBulbs, bulbColor};
             }
         );
     }
@@ -775,14 +744,41 @@
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
                 const id = getIdFromRow(opponentRow);
+                const teamsData = OPPONENT_DETAILS_BY_ID[id].HHLT.teams;
 
-                let teamPower = opponentRow.querySelector('.data-column[column="team"]').lastElementChild;
+                const $teamColumn = $(opponentRow).find('.data-column[column="team"]');
+                $teamColumn.html('');
+                // TODO css independent of HH++
+                const $teamIcons = $('<div class="button_team_synergy"></div>');
+                $teamIcons.appendTo($teamColumn);
 
-                const opponent = OPPONENT_DETAILS_BY_ID[id];
-                const powerChange = opponent.HHLT.teams.powerChange;
+                teamsData.themeIcons.forEach((icon) => {
+                    $teamIcons.append(icon);
+                });
+                if (teamsData.themeIcons.length === 2) {
+                    $teamIcons.children().last().css('margin-left', '-0.66rem');
+                }
+                if (CONFIG.activeSkill.noIcon) {
+                    const $nickname = $(opponentRow).find('.data-column[column="nickname"]');
+                    // remove clubmate class from League++ so clubmates get colored correctly too
+                    $nickname.removeClass('clubmate');
+                    if (teamsData.skill) {
+                        $nickname.css('color', teamsData.skill.color);
+                    }
+                } else {
+                    if (teamsData.skill) {
+                        $teamIcons.children().last().css('margin-right', '-0.15rem');
+                        $teamIcons.append(teamsData.skillIcon);
+                    }
+                }
+
+                const $teamPower = $(`<span class="team-power">${teamsData.teamPower}</span>`)
+                $teamPower.appendTo($teamColumn);
+
+                const powerChange = teamsData.powerChange;
                 const timeDiff = serverNow() - powerChange.lastChangeTime;
 
-                let tooltip = opponent.HHLT.teams.tooltip;
+                let tooltip = teamsData.tooltip;
                 if (powerChange.conditions.addTime) {
                     tooltip += `${FORMAT.time(timeDiff)} ago`;
                 }
@@ -790,15 +786,15 @@
                     tooltip += `<br>${powerChange.staleBlessingCount} girl${powerChange.staleBlessingCount > 1 ? 's' : ''} with old blessings!`
                              + `<br>Expected change: ${FORMAT.statDiff(powerChange.expectedPowerDiff)}`;
                     // this gives the team power a negative look
-                    teamPower.style.color = `#000`;
+                    $teamPower.css('color', `#000`);
                     const outlineColor = (powerChange.expectedPowerDiff < 0)
                         ? '#ffffff' : '#ffb244';
-                    teamPower.style.textShadow = `1px 1px 2px ${outlineColor}, -1px 1px 2px ${outlineColor}, -1px -1px 2px ${outlineColor}, 1px -1px 2px ${outlineColor}`;
+                    $teamPower.css('text-shadow', `1px 1px 2px ${outlineColor}, -1px 1px 2px ${outlineColor}, -1px -1px 2px ${outlineColor}, 1px -1px 2px ${outlineColor}`);
                 } else if (timeDiff < 10 * 60 * 1000) {
                     const statColor = getStatColor(timeDiff, powerChange.conditions.positiveDiff);
-                    teamPower.setAttribute('style', `color: ${statColor}`);
+                    $teamPower.css('color', statColor);
                 }
-                teamPower.setAttribute('tooltip', tooltip);
+                $teamPower.attr('tooltip', tooltip);
             }
         );
     }
@@ -1124,6 +1120,9 @@
         let formatters = {};
 
         formatters.score = Intl.NumberFormat('en',).format;
+
+        formatters.power = Intl.NumberFormat('en', {
+            maximumFractionDigits: 0}).format;
 
         formatters.statDiff = Intl.NumberFormat('en', {
                 notation: 'compact',
