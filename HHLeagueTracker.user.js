@@ -349,6 +349,22 @@
         updateTeams(opponentData, opponentStats);
     }
 
+    function colorNames() {
+        $('#leagues .league_table .data-list .data-row.body-row').each(
+            function () {
+                const id = getIdFromRow(this);
+                const teamsData = OPPONENT_DETAILS_BY_ID[id].HHLT.teams;
+
+                const $nickname = $(this).find('.data-column[column="nickname"]');
+                // remove clubmate class from League++ so clubmates get colored correctly too
+                $nickname.removeClass('clubmate');
+                if (teamsData.skill) {
+                    $nickname.css('color', teamsData.skill.color);
+                }
+            }
+        );
+    }
+
     function writeTable() {
         if (CONFIG.hideLevel.move) {
             addLevelToAvatar();
@@ -373,7 +389,13 @@
             addBulbColumn();
         }
 
-        writeTeams();
+        if (CONFIG.teams.enabled) {
+            writeTeams();
+        }
+
+        if (CONFIG.skillColor.enabled) {
+            colorNames();
+        }
 
         writeStats();
 
@@ -585,12 +607,12 @@
                 const opponentTeam = opponent.player.team;
 
                 const skill = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
-                    ? getSkillByElement(opponentTeam.girls[0].girl.element)
+                    ? getSkillByElement(opponentTeam.girls[0].girl.element, CONFIG.skillColor.ocd)
                     : null;
 
                 let tooltip = document.createElement('div');
 
-                if (CONFIG.usedTeams.enabled) {
+                if (CONFIG.teams.usedTeams) {
                     // store your own teams locally
                     let teamsSet = (id !== MY_ID)
                         ? opponentData[id].teams?.length ? new Set(opponentData[id].teams) : new Set()
@@ -754,18 +776,9 @@
                 if (teamsData.themeIcons.length === 2) {
                     $teamIcons.children().last().css('margin-left', '-0.66rem');
                 }
-                if (CONFIG.activeSkill.noIcon) {
-                    const $nickname = $(opponentRow).find('.data-column[column="nickname"]');
-                    // remove clubmate class from League++ so clubmates get colored correctly too
-                    $nickname.removeClass('clubmate');
-                    if (teamsData.skill) {
-                        $nickname.css('color', teamsData.skill.color);
-                    }
-                } else {
-                    if (teamsData.skill) {
-                        $teamIcons.children().last().css('margin-right', '-0.15rem');
-                        $teamIcons.append(teamsData.skillIcon);
-                    }
+                if (CONFIG.teams.icon && teamsData.skill) {
+                    $teamIcons.children().last().css('margin-right', '-0.15rem');
+                    $teamIcons.append(teamsData.skillIcon);
                 }
 
                 const $teamPower = $(`<span class="team-power">${teamsData.teamPower}</span>`)
@@ -1258,10 +1271,10 @@
                 { enabled: true },
             scoreColor:
                 { enabled: true },
-            activeSkill:
-                { enabled: false, noIcon: false, ocd: false },
-            usedTeams:
+            teams:
                 { enabled: false },
+            skillColor:
+                { enabled: false, ocd: false },
             average:
                 { enabled: false, color: false },
             bulb:
@@ -1290,21 +1303,6 @@
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
             configSchema: {
-                baseKey: 'githubStorage',
-                label: 'Sync data to GitHub (see <a href="https://github.com/xnh0x/HH-League-Tracker" target="_blank">README</a>).',
-                default: true,
-            },
-            run() {
-                config.githubStorage = {
-                    enabled: true,
-                };
-            },
-        });
-        config.githubStorage.enabled = false;
-
-        hhPlusPlusConfig.registerModule({
-            group: 'LeagueTracker',
-            configSchema: {
                 baseKey: 'scoreColor',
                 label: `Color scores based on the amount of lost points<br>`
                     + ` <span style="color: ${getScoreColor(25)}">&le;25</span>`
@@ -1324,17 +1322,39 @@
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
             configSchema: {
-                baseKey: 'activeSkill',
-                label: 'Add active skill icon to the team column',
+                baseKey: 'teams',
+                label: 'Overwrite team column',
                 default: true,
                 subSettings: [
-                    { key: 'noIcon', default: false,
-                        label: `Instead of an icon apply color to the player name<br>`
-                            + ` <span style="color: #ec0039">RFL</span>`
-                            + ` <span style="color: #d561e6">STN</span>`
-                            + ` <span style="color: #ffb244">SHD</span>`
-                            + ` <span style="color: #32bc4f">EXE</span>`,
+                    { key: 'icon', default: true,
+                        label: 'Add active skill icon',
                     },
+                    { key: 'usedTeams', default: false,
+                        label: 'Track used teams',
+                    },
+                ],
+            },
+            run(subSettings) {
+                config.teams = {
+                    enabled: true,
+                    icon: subSettings.icon,
+                    usedTeams: subSettings.usedTeams,
+                };
+            },
+        });
+        config.teams.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'skillColor',
+                label: `Color player name based on the team skill<br>`
+                    + ` <span style="color: #ec0039">RFL</span>`
+                    + ` <span style="color: #d561e6">STN</span>`
+                    + ` <span style="color: #ffb244">SHD</span>`
+                    + ` <span style="color: #32bc4f">EXE</span>`,
+                default: false,
+                subSettings: [
                     { key: 'ocd', default: false,
                         label: `Use the same colors as OCD <br>`
                             + ` <span style="color: #b968e6">RFL</span>`
@@ -1345,14 +1365,13 @@
                 ],
             },
             run(subSettings) {
-                config.activeSkill = {
+                config.skillColor = {
                     enabled: true,
-                    noIcon: subSettings.noIcon || subSettings.ocd,
                     ocd: subSettings.ocd,
                 };
             },
         });
-        config.activeSkill.enabled = false;
+        config.skillColor.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
@@ -1428,21 +1447,6 @@
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
             configSchema: {
-                baseKey: 'usedTeams',
-                label: 'Track used teams',
-                default: false,
-            },
-            run() {
-                config.usedTeams = {
-                    enabled: true,
-                };
-            },
-        });
-        config.usedTeams.enabled = false;
-
-        hhPlusPlusConfig.registerModule({
-            group: 'LeagueTracker',
-            configSchema: {
                 baseKey: 'screenshot',
                 label: 'If the league is about to end (<10m) calculate average and lost points as if all fights are done',
                 default: true,
@@ -1508,6 +1512,21 @@
             },
         });
         config.challenges.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'githubStorage',
+                label: 'Sync data to GitHub (see <a href="https://github.com/xnh0x/HH-League-Tracker" target="_blank">README</a>).',
+                default: true,
+            },
+            run() {
+                config.githubStorage = {
+                    enabled: true,
+                };
+            },
+        });
+        config.githubStorage.enabled = false;
 
         hhPlusPlusConfig.loadConfig();
         hhPlusPlusConfig.runModules();
