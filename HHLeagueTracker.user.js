@@ -1303,7 +1303,7 @@
 
         hhPlusPlusConfig.registerGroup({
             key: 'LeagueTracker',
-            name: `<span tooltip="${GM_info.script.version}">League Tracker</span>`
+            name: 'League Tracker'
         });
 
         addStyle(`
