@@ -1182,6 +1182,12 @@
         return year + 'W' + (weekNumber < 10 ? '0' : '') + weekNumber;
     }
 
+    function addStyle(css) {
+        const sheet = document.createElement('style');
+        sheet.textContent = css;
+        document.head.appendChild(sheet);
+    }
+
     async function mergeLocalAndGithubData(localData) {
         const github = await readFromGithub();
         // merge local storage data into the data from GitHub to not lose data if sync was previously off or
@@ -1299,6 +1305,18 @@
             key: 'LeagueTracker',
             name: `<span tooltip="${GM_info.script.version}">League Tracker</span>`
         });
+
+        addStyle(`
+            h4.LeagueTracker.selected::after {
+                content: 'v${GM_info.script.version}';
+                display: block;
+                position: absolute;
+                top: -10px;
+                right: -15px;
+                font-size: 10px;
+            }
+            h4.LeagueTracker.selected:last-child::after { right: 0; }
+        `);
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
