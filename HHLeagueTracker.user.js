@@ -381,7 +381,9 @@
             }
         }
 
-        writeScores();
+        if (CONFIG.score.enabled) {
+            writeScores();
+        }
 
         if (CONFIG.average.enabled) {
             addAverageColumn();
@@ -399,13 +401,17 @@
             colorNames();
         }
 
-        writeStats();
+        if (CONFIG.stats.enabled) {
+            writeStats();
+        }
 
         if (CONFIG.challenges.enabled) {
             lostPointsOnChallenges();
         }
 
-        markOpponents();
+        if (CONFIG.marks.enabled) {
+            markOpponents();
+        }
     }
 
     function updateScores(opponentData) {
@@ -503,7 +509,7 @@
 
                 const changes = OPPONENT_DETAILS_BY_ID[id].HHLT.score;
 
-                if (CONFIG.scoreColor.enabled) {
+                if (CONFIG.score.color) {
                     opponentRow.querySelector('.data-column[column="player_league_points"]').style.color = changes.color;
                 }
 
@@ -1294,7 +1300,11 @@
         let config = {
             githubStorage:
                 { enabled: true },
-            scoreColor:
+            score:
+                { enabled: true, color: true },
+            stats:
+                { enabled: true },
+            marks:
                 { enabled: true },
             teams:
                 { enabled: false },
@@ -1340,21 +1350,42 @@
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
             configSchema: {
-                baseKey: 'scoreColor',
-                label: `Color scores based on the amount of lost points<br>`
-                    + ` <span style="color: ${getScoreColor(25)}">&le;25</span>`
-                    + ` <span style="color: ${getScoreColor(50)}">&le;50</span>`
-                    + ` <span style="color: ${getScoreColor(100)}">&le;100</span>`
-                    + ` <span style="color: ${getScoreColor(200)}">&le;200</span>`,
+                baseKey: 'score',
+                label: `Show lost points`,
+                default: true,
+                subSettings: [
+                    { key: 'color', default: true,
+                        label: `Color scores based on the amount of lost points<br>`
+                            + ` <span style="color: ${getScoreColor(25)}">&le;25</span>`
+                            + ` <span style="color: ${getScoreColor(50)}">&le;50</span>`
+                            + ` <span style="color: ${getScoreColor(100)}">&le;100</span>`
+                            + ` <span style="color: ${getScoreColor(200)}">&le;200</span>`,
+                    },
+                ],
+            },
+            run(subSettings) {
+                config.score = {
+                    enabled: true,
+                    color: subSettings.color,
+                };
+            },
+        });
+        config.score.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'stats',
+                label: `Show stat changes`,
                 default: true,
             },
             run() {
-                config.scoreColor = {
+                config.stats = {
                     enabled: true,
                 };
             },
         });
-        config.scoreColor.enabled = false;
+        config.stats.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
@@ -1549,6 +1580,21 @@
             },
         });
         config.challenges.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'marks',
+                label: `Mark opponents by clicking on the rank`,
+                default: true,
+            },
+            run() {
+                config.marks = {
+                    enabled: true,
+                };
+            },
+        });
+        config.marks.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
