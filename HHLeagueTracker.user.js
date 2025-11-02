@@ -234,8 +234,10 @@
             // reduce line height to fit two lines of text in the row
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
             // color rank number of marked opponents
-            [1,2,3,4,5].map((i) =>
-                `.LT-mark-${i} .data-column[column="place"] { color:${getMarkColor(i)} }`).join(' '),
+            !(LEAGUE_ENDING && CONFIG.screenshot.enabled)
+                ? [1,2,3,4,5].map((i) =>
+                    `.LT-mark-${i} .data-column[column="place"] { color:${getMarkColor(i)} }`).join(' ')
+                : '',
         ].join(' ');
         document.head.appendChild(sheet);
     }
