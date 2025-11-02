@@ -1190,6 +1190,23 @@
         document.head.appendChild(sheet);
     }
 
+    function doASAP(callback, selector, condition = (jQ) => jQ.length, waitMessage = null) {
+        const $selected = $(selector);
+        if (condition($selected)) {
+            callback($selected);
+        } else {
+            if (waitMessage) log(waitMessage);
+            const observer = new MutationObserver(() => {
+                const $selected = $(selector);
+                if (condition($selected)) {
+                    observer.disconnect();
+                    callback($selected);
+                }
+            })
+            observer.observe(document.documentElement, {childList: true, subtree: true});
+        }
+    }
+
     async function mergeLocalAndGithubData(localData) {
         const github = await readFromGithub();
         // merge local storage data into the data from GitHub to not lose data if sync was previously off or
