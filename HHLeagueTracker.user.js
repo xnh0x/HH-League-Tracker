@@ -305,9 +305,9 @@
 
         $boosterText.off('click').on('click', () => {
             // click on text will select the opponent row
-            const $nextRow = $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`);
-            $nextRow.trigger('click');
-            $nextRow.get(0).scrollIntoView({block: "center", behavior: "smooth"});
+            const nextRow = $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`).get(0);
+            nextRow.click();
+            nextRow.scrollIntoView({block: "center", behavior: "smooth"});
         });
 
         const unboostSound = getUnboostSound();
@@ -318,7 +318,7 @@
                 $time.text("EXPIRED");
                 $boosterText.off('click').on('click', () => {
                     // after the boosters expire a click will also reload the league
-                    $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`).trigger('click');
+                    $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`).get(0).click();
                     window.location.reload();
                     $boosterText.off('click');
                 });
