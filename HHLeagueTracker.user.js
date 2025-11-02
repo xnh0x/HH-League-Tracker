@@ -169,7 +169,9 @@
             }
         );
 
-        $('.data-row.body-row.selected')[0]?.scrollIntoView({block: "center", behavior: "smooth"});
+        doASAP(($row)=>{
+            $row.get(0).scrollIntoView({block: "center", behavior: "smooth"});
+            },'.data-row.body-row.selected');
 
         if (CONFIG.boosterTimer.enabled) {
             createBoosterCountdown();
