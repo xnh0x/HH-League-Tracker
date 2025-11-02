@@ -51,7 +51,8 @@
         return;
     }
 
-    addCSS();
+    const LEAGUE_ENDING = window.season_end_at < 10 * 60;
+    addCSS(LEAGUE_ENDING);
 
     const FORMAT = getFormatters();
     let GITHUB_PARAMS = {};
@@ -73,7 +74,6 @@
     const SERVER_PAGE_LOAD_TS = window.server_now_ts * 1000;
     const SERVER_OFFSET = SERVER_PAGE_LOAD_TS - LOCAL_PAGE_LOAD_TS;
     const LEAGUE_END_TS = (window.server_now_ts + window.season_end_at) * 1000;
-    const LEAGUE_ENDING = window.season_end_at < 10 * 60;
     const TOTAL_FIGHTS = (opponents_list.length - 1) * 3;
     const MAX_SCORE = TOTAL_FIGHTS * 25;
 
@@ -215,7 +215,7 @@
         return Date.now() + SERVER_OFFSET;
     }
 
-    function addCSS() {
+    function addCSS(leagueEnding) {
         let sheet = document.createElement("style");
         sheet.textContent = [
             // remove white blob below challenge results
@@ -234,7 +234,7 @@
             // reduce line height to fit two lines of text in the row
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
             // color rank number of marked opponents
-            !(LEAGUE_ENDING && CONFIG.screenshot.enabled)
+            !(leagueEnding && CONFIG.screenshot.enabled)
                 ? [1,2,3,4,5].map((i) =>
                     `.LT-mark-${i} .data-column[column="place"] { color:${getMarkColor(i)} }`).join(' ')
                 : '',
