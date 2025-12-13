@@ -169,10 +169,6 @@
             }
         );
 
-        doASAP(($row)=>{
-            $row.get(0).scrollIntoView({block: "center", behavior: "smooth"});
-            },'.data-row.body-row.selected');
-
         if (CONFIG.boosterTimer.enabled) {
             createBoosterCountdown();
         }
@@ -194,8 +190,12 @@
         writeTable();
 
         // redo changes after sorting the table
-        const sortingObserver = new MutationObserver(() => { writeTable(); })
-        sortingObserver.observe(document.querySelector('.league_table .data-list'), {childList: true})
+        const sortingObserver = new MutationObserver(() => { writeTable(); });
+        sortingObserver.observe(document.querySelector('.league_table .data-list'), {childList: true});
+
+        doASAP(($row)=>{
+            $row.get(0).scrollIntoView({block: "center", behavior: "smooth"});
+        },'.data-row.body-row.selected');
     }
 
     function info() {
