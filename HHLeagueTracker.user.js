@@ -26,6 +26,8 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com
 // @grant        unsafeWindow
 // @grant        GM_info
+// @grant        GM.xmlHttpRequest
+// @connect      api.github.com
 // ==/UserScript==
 
 (async function (window) {
@@ -1236,8 +1238,9 @@
 
     async function readFromGithub() {
         info(`reading ${GITHUB_PARAMS.path}`);
-        const response = await fetch(GITHUB_PARAMS.url, {
-            method: 'GET',
+        const response = await GM.xmlHttpRequest({
+            method: "GET",
+            url: GITHUB_PARAMS.url,
             headers: {
                 'Accept': 'application/vnd.github+json',
                 'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
@@ -1247,7 +1250,7 @@
         if (response.status !== 200) {
             throw response.status;
         }
-        const data = await response.json();
+        const data = JSON.parse(response.responseText);
         return {
             data: JSON.parse(atob(data.content)), // file content needs to be decoded from base64
             sha: data.sha, // required to write an update later
@@ -1280,13 +1283,14 @@
         if (sha) {
             data.sha = sha; // to write an update sha is required
         }
-        await fetch(GITHUB_PARAMS.url, {
-            method: 'PUT',
+        await GM.xmlHttpRequest({
+            method: "PUT",
+            url: GITHUB_PARAMS.url,
             headers: {
                 'Accept': 'application/vnd.github+json',
                 'Authorization': `Bearer ${GITHUB_PARAMS.token}`,
             },
-            body: JSON.stringify(data),
+            data: JSON.stringify(data),
         });
     }
 
