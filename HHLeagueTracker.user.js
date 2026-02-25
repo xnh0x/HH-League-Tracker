@@ -619,7 +619,7 @@
                 const opponentTeam = opponent.player.team;
 
                 const skill = opponentTeam.girls[0].skill_tiers_info['5']?.skill_points_used
-                    ? getSkillByElement(opponentTeam.girls[0].girl.element, CONFIG.skillColor.ocd)
+                    ? getSkillByElement(opponentTeam.girls[0].girl.element_data.type, CONFIG.skillColor.ocd)
                     : null;
 
                 let tooltip = document.createElement('div');
@@ -758,7 +758,7 @@
                 const skillIcon = skill
                     ? getSkillIcon(skill.type, {
                         style: 'height: 16px; width: 16px;',
-                        tooltip: `${skill.type} ${opponentTeam.girls[0].skills[skill.id].skill.display_value_text}`})
+                        tooltip: `${skill.type} `}) // ${opponentTeam.girls[0].skills[skill.id].skill.display_value_text}
                     : null;
                 const themeIcons = opponentTeam.theme
                     .split(',')
