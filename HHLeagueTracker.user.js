@@ -735,24 +735,26 @@
                 let staleBlessingCount = 0;
                 // stale blessings last for about an hour at most so limit the check to
                 // shorty after blessing change since it's pointless otherwise
-                if (259200 > window.season_end_at && window.season_end_at > 255000) {
-                    let expectedTP = 0;
-                    opponent.player.team.girls.forEach((girl) => {
-                        let correctBlessing = 1;
-                        if (girl.can_be_blessed) {
-                            correctBlessing = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
-                                (total, bonus) => {
-                                    return total * (1 + bonus / 100);
-                                }, 1);
-                        }
-                        const expectedCaracsSum = (girl.caracs.carac1 + girl.caracs.carac2 + girl.caracs.carac3) * correctBlessing;
-                        expectedTP += expectedCaracsSum;
-                        if (Math.abs(expectedCaracsSum - girl.caracs_sum) > 1) {
-                            staleBlessingCount++;
-                        }
-                    })
-                    powerChange.expectedPowerDiff = expectedTP - teamPower;
-                }
+
+                // FIXME: currently broken since blessing info was removed
+                // if (259200 > window.season_end_at && window.season_end_at > 255000) {
+                //     let expectedTP = 0;
+                //     opponent.player.team.girls.forEach((girl) => {
+                //         let correctBlessing = 1;
+                //         if (girl.can_be_blessed) {
+                //             correctBlessing = girl.girl.blessing_bonuses.pvp_v3.carac1.reduce(
+                //                 (total, bonus) => {
+                //                     return total * (1 + bonus / 100);
+                //                 }, 1);
+                //         }
+                //         const expectedCaracsSum = (girl.caracs.carac1 + girl.caracs.carac2 + girl.caracs.carac3) * correctBlessing;
+                //         expectedTP += expectedCaracsSum;
+                //         if (Math.abs(expectedCaracsSum - girl.caracs_sum) > 1) {
+                //             staleBlessingCount++;
+                //         }
+                //     })
+                //     powerChange.expectedPowerDiff = expectedTP - teamPower;
+                // }
                 powerChange.staleBlessingCount = staleBlessingCount;
 
                 const skillIcon = skill
@@ -803,6 +805,7 @@
                 if (powerChange.conditions.addTime) {
                     tooltip += `${FORMAT.time(timeDiff)} ago`;
                 }
+                // FIXME: currently broken since blessing info was removed
                 if (powerChange.staleBlessingCount > 0) {
                     tooltip += `<br>${powerChange.staleBlessingCount} girl${powerChange.staleBlessingCount > 1 ? 's' : ''} with old blessings!`
                              + `<br>Expected change: ${FORMAT.statDiff(powerChange.expectedPowerDiff)}`;
