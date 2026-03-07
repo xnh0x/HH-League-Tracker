@@ -1372,7 +1372,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.score = {
                     enabled: true,
                     color: subSettings.color,
@@ -1388,7 +1391,10 @@
                 label: `Show stat changes`,
                 default: true,
             },
+            hasRun: false,
             run() {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.stats = {
                     enabled: true,
                 };
@@ -1411,7 +1417,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.teams = {
                     enabled: true,
                     icon: subSettings.icon,
@@ -1441,7 +1450,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.skillColor = {
                     enabled: true,
                     ocd: subSettings.ocd,
@@ -1466,7 +1478,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.average = {
                     enabled: true,
                     color: subSettings.color,
@@ -1491,7 +1506,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.bulb = {
                     enabled: true,
                     color: subSettings.color,
@@ -1512,7 +1530,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.hideLevel = {
                     enabled: true,
                     move: subSettings.move,
@@ -1528,7 +1549,10 @@
                 label: 'If the league is about to end (<10m) calculate average and lost points as if all fights are done',
                 default: true,
             },
+            hasRun: false,
             run() {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.screenshot = {
                     enabled: true,
                 };
@@ -1554,7 +1578,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.boosterTimer = {
                     enabled: true,
                     sound: subSettings.sound,
@@ -1580,7 +1607,10 @@
                     },
                 ],
             },
+            hasRun: false,
             run(subSettings) {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.challenges = {
                     enabled: true,
                     allRed: subSettings.allRed,
@@ -1597,7 +1627,10 @@
                 label: `Mark opponents by clicking on the rank`,
                 default: true,
             },
+            hasRun: false,
             run() {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.marks = {
                     enabled: true,
                 };
@@ -1612,7 +1645,10 @@
                 label: 'Sync data to GitHub (see <a href="https://github.com/xnh0x/HH-League-Tracker" target="_blank">README</a>).',
                 default: true,
             },
+            hasRun: false,
             run() {
+                if (this.hasRun) return;
+                this.hasRun = true;
                 config.githubStorage = {
                     enabled: true,
                 };
