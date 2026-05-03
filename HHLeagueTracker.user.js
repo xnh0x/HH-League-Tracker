@@ -1330,7 +1330,7 @@
             screenshot:
                 { enabled: true },
             boosterTimer:
-                { enabled: true, sound: false, refresh: true, ignoreGrays: false },
+                { enabled: true, sound: false, refresh: true, skip: false, ignoreGrays: false },
             challenges:
                 { enabled: false, allRed: true, twentyFive: '' },
         };
