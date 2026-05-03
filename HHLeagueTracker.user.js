@@ -322,12 +322,14 @@
             if (timeLeft <= 0) {
                 clearInterval(updateTimer);
                 $time.text("EXPIRED");
-                $boosterText.off('click').on('click', () => {
-                    // after the boosters expire a click will also reload the league
-                    $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`).get(0).click();
-                    window.location.reload();
-                    $boosterText.off('click');
-                });
+                if (CONFIG.boosterTimer.refresh) {
+                    $boosterText.off('click').on('click', () => {
+                        // after the boosters expire a click will also reload the league
+                        $(`.data-row.body-row:has(.nickname[id-member="${next.id}"])`).get(0).click();
+                        window.location.reload();
+                        $boosterText.off('click');
+                    });
+                }
                 if (CONFIG.boosterTimer.sound) {
                     unboostSound.play();
                 }
@@ -1328,7 +1330,7 @@
             screenshot:
                 { enabled: true },
             boosterTimer:
-                { enabled: true, sound: false, ignoreGrays: false },
+                { enabled: true, sound: false, refresh: true, ignoreGrays: false },
             challenges:
                 { enabled: false, allRed: true, twentyFive: '' },
         };
@@ -1570,6 +1572,9 @@
                     { key: 'sound', default: false,
                         label: 'Play a sound once they do',
                     },
+                    { key: 'refresh', default: true,
+                        label: 'Refresh the table when clicking an expired timer',
+                    },
                     { key: 'skip', default: true,
                         label: 'Right click skips to the next opponent',
                     },
@@ -1585,6 +1590,7 @@
                 config.boosterTimer = {
                     enabled: true,
                     sound: subSettings.sound,
+                    refresh: subSettings.refresh,
                     skip: subSettings.skip,
                     ignoreGrays: subSettings.ignoreGrays,
                 };
