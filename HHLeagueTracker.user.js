@@ -26,6 +26,7 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com
 // @grant        unsafeWindow
 // @grant        GM_info
+// @grant        GM_addStyle
 // @grant        GM.xmlHttpRequest
 // @connect      api.github.com
 // ==/UserScript==
@@ -242,6 +243,13 @@
                 : '',
         ].join(' ');
         document.head.appendChild(sheet);
+
+        GM_addStyle(`
+            .hh_tooltip_new:has(.booster-expire) .item-price { display: none; }
+            .hh_tooltip_new:has(.booster-expire) .item-properties { margin: 5px 10px 0px; }
+            .hh_tooltip_new:has(.booster-expire) .season_rewards_tooltip { padding: 0px 10px 5px; }
+            .hh_tooltip_new:has(.booster-expire) .season_rewards_tier_info { display: none; }
+        `);
     }
 
     function getIdFromRow(row) {
@@ -418,6 +426,8 @@
         if (CONFIG.marks.enabled) {
             markOpponents();
         }
+
+        addAbsoluteBoosterExpireTime();
     }
 
     function updateScores(opponentData) {
@@ -1001,6 +1011,18 @@
             marks[id] = mark;
             localStorage.setItem(LOCAL_STORAGE_KEYS.opponentMarks, JSON.stringify(marks));
         }
+    }
+
+    function addAbsoluteBoosterExpireTime() {
+        $('.data-column[column="boosters"] .boosters .slot').each(function(){
+            const expiration = $(this).data('d')['lifetime'] * 1000;
+            const expirationDate = (new Date(expiration));
+            let text = `${expirationDate.toLocaleString(document.documentElement.lang.replace('_','-'), {hour:'numeric', minute:'numeric', second:'numeric'})}`;
+            // the leading 0 will be dropped in the tooltip, add an invisible element to prevent that
+            text = text.replaceAll(/:0/g, ':0<i></i>');
+            const additionalTooltipInfo = {additionalText: `<span class="booster-expire">Expires at ${text}</span>`};
+            $(this).attr('additional-tooltip-info', JSON.stringify(additionalTooltipInfo));
+        });
     }
 
     function getScoreColor(lostPoints) {
