@@ -246,9 +246,28 @@
 
         GM_addStyle(`
             .hh_tooltip_new:has(.booster-expire) .item-price { display: none; }
-            .hh_tooltip_new:has(.booster-expire) .item-properties { margin: 5px 10px 0px; }
-            .hh_tooltip_new:has(.booster-expire) .season_rewards_tooltip { padding: 0px 10px 5px; }
+            
             .hh_tooltip_new:has(.booster-expire) .season_rewards_tier_info { display: none; }
+            
+            .hh_tooltip_new .season_rewards_tooltip .booster-expire { 
+                text-align: center; 
+                padding: 2px 0; 
+                color: white; 
+                font-family: 'Carter One', 'Alegreya Sans', sans-serif; 
+                font-size: 14px;
+            }
+            .hh_tooltip_new.legendary-border:has(.booster-expire) .season_rewards_tooltip {
+                border-top: 1px solid #d561e6; background-color: rgba(213, 97, 230, 0.5);
+            }
+            .hh_tooltip_new.epic-border:has(.booster-expire) .season_rewards_tooltip {
+                border-top: 1px solid #ffb244; background-color: rgba(255,178,68,0.5);
+            }
+            .hh_tooltip_new.rare-border:has(.booster-expire) .season_rewards_tooltip {
+                border-top: 1px solid #32bc4f; background-color: rgba(50,188,79,0.5);
+            }
+            .hh_tooltip_new.common-border:has(.booster-expire) .season_rewards_tooltip {
+                border-top: 1px solid #8d8e9f; background-color: rgba(153, 153, 153, 0.5);
+            }
         `);
     }
 
@@ -1020,7 +1039,7 @@
             let text = `${expirationDate.toLocaleString(document.documentElement.lang.replace('_','-'), {hour:'numeric', minute:'numeric', second:'numeric'})}`;
             // the leading 0 will be dropped in the tooltip, add an invisible element to prevent that
             text = text.replaceAll(/:0/g, ':0<i></i>');
-            const additionalTooltipInfo = {additionalText: `<span class="booster-expire">Expires at ${text}</span>`};
+            const additionalTooltipInfo = {additionalText: `<span class="booster-expire">Ends at ${text}</span>`};
             $(this).attr('additional-tooltip-info', JSON.stringify(additionalTooltipInfo));
         });
     }
