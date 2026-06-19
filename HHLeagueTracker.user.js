@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         HH League Tracker
-// @version      1.20.1
+// @version      1.20.2
 // @description  Highlight stat changes, track lost points
 // @author       xnh0x
 // @match        https://*.hentaiheroes.com/leagues.html*
@@ -1039,7 +1039,7 @@
             let text = `${expirationDate.toLocaleString(document.documentElement.lang.replace('_','-'), {hour:'numeric', minute:'numeric', second:'numeric'})}`;
             // the leading 0 will be dropped in the tooltip, add an invisible element to prevent that
             text = text.replaceAll(/:0/g, ':0<i></i>');
-            const additionalTooltipInfo = {additionalText: `<span class="booster-expire">Ends at ${text}</span>`};
+            const additionalTooltipInfo = {additionalText: `<span class="booster-expire">Ends at <span class="orange">${text}</span></span>`};
             $(this).attr('additional-tooltip-info', JSON.stringify(additionalTooltipInfo));
         });
     }
