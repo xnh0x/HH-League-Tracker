@@ -234,6 +234,11 @@
             // remove level column
             CONFIG.hideLevel.enabled ? '.data-row.body-row .data-column[column="level"] { display: none; }' : '',
             CONFIG.hideLevel.enabled && !CONFIG.hideLevel.move ? '.data-row.head-row .data-column[column="level"] { display: none; }' : '',
+            // remove promotion column
+            CONFIG.promotion.enabled ? '.data-row.body-row .data-column[column="change"] { display: none; }' : '',
+            // position the promotion icon on the rank number
+            CONFIG.promotion.enabled ? '.data-row.body-row .data-column[column="place"] { width: 5rem; position: relative; display: inline-block; }' : '',
+            CONFIG.promotion.enabled ? '.data-row.body-row .data-column[column="place"] .change_icn { width: 45%; height: 45%; position: absolute; top: -5px; left: -5px; }' : '',
             // reduce line height to fit two lines of text in the row
             '.data-column[column="player_league_points"] { text-align: right; line-height: 15px; }',
             // color rank number of marked opponents
@@ -403,14 +408,22 @@
     function writeTable() {
         if (CONFIG.hideLevel.move) {
             addLevelToAvatar();
-            if (!CONFIG.hideLevel.moveDone) {
+            if (!CONFIG.hideLevel.headerSwapped) {
                 // swap lvl and name header to have lvl above the avatar
                 let headers = document.querySelector('#leagues .league_table .data-list .data-row.head-row');
                 let lvl = headers.querySelector('.data-column[column="level"]');
                 let name = headers.querySelector('.data-column[column="nickname"]');
                 headers.removeChild(lvl);
                 name.before(lvl);
-                CONFIG.hideLevel.moveDone = true;
+                CONFIG.hideLevel.headerSwapped = true;
+            }
+        }
+
+        if (CONFIG.promotion.enabled) {
+            movePromotionToRank();
+            if (!CONFIG.promotion.headerRemoved) {
+                $('#leagues .league_table .data-list .data-row.head-row [column="change"]').remove();
+                CONFIG.promotion.headerRemoved = true;
             }
         }
 
@@ -964,6 +977,18 @@
         );
     }
 
+    function movePromotionToRank() {
+        $('#leagues .league_table .data-list .data-row.body-row').each(
+            function () {
+                const $change = $(this).find('.data-column[column="change"] span');
+                if (!$change.length) { return; }
+
+                const $place = $(this).find('.data-column[column="place"]');
+                $place.append($change);
+            }
+        );
+    }
+
     function lostPointsOnChallenges() {
         document.querySelectorAll('#leagues .league_table .data-list .data-row.body-row').forEach(
             opponentRow => {
@@ -1368,6 +1393,8 @@
                 { enabled: false, color: false },
             hideLevel:
                 { enabled: false, move: false },
+            promotion:
+                { enabled: false },
             screenshot:
                 { enabled: true },
             boosterTimer:
@@ -1584,6 +1611,24 @@
             },
         });
         config.hideLevel.enabled = false;
+
+        hhPlusPlusConfig.registerModule({
+            group: 'LeagueTracker',
+            configSchema: {
+                baseKey: 'promotion',
+                label: 'Merge promotion and rank into one column',
+                default: true,
+            },
+            hasRun: false,
+            run() {
+                if (this.hasRun) return;
+                this.hasRun = true;
+                config.promotion = {
+                    enabled: true,
+                };
+            },
+        });
+        config.promotion.enabled = false;
 
         hhPlusPlusConfig.registerModule({
             group: 'LeagueTracker',
